@@ -1,11 +1,11 @@
 <?php
 
-namespace Symlink\ORM\Exceptions;
+namespace NiceModules\ORM\Exceptions;
 
 /**
  * Class RequiredAnnotationMissingException
  *
- * @package Symlink\ORM
+ * @package NiceModules\ORM
  */
 class RequiredAnnotationMissingException extends \Exception {
 }

@@ -1,8 +1,8 @@
 <?php
 
-namespace Symlink\ORM\Repositories;
+namespace NiceModules\ORM\Repositories;
 
-use Symlink\ORM\QueryBuilder;
+use NiceModules\ORM\QueryBuilder;
 
 class BaseRepository {
 
@@ -25,7 +25,7 @@ class BaseRepository {
    * @param $classname
    * @param $annotations
    *
-   * @return \Symlink\ORM\Repositories\BaseRepository
+   * @return \NiceModules\ORM\Repositories\BaseRepository
    */
   public static function getInstance($classname, $annotations) {
     // Get the class (as this could be a child of BaseRepository)
@@ -36,7 +36,7 @@ class BaseRepository {
   }
 
   /**
-   * @return \Symlink\ORM\QueryBuilder
+   * @return \NiceModules\ORM\QueryBuilder
    */
   public function createQueryBuilder() {
     return new QueryBuilder($this);

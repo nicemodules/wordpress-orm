@@ -1,11 +1,11 @@
 <?php
 
-namespace Symlink\ORM\Exceptions;
+namespace NiceModules\ORM\Exceptions;
 
 /**
  * Class UnknownColumnTypeException
  *
- * @package Symlink\ORM
+ * @package NiceModules\ORM
  */
 class UnknownColumnTypeException extends \Exception {
 }

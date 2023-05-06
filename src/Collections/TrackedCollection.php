@@ -1,6 +1,6 @@
 <?php
 
-namespace Symlink\ORM\Collections;
+namespace NiceModules\ORM\Collections;
 
 define('_OBJECT_NEW', 1);
 define('_OBJECT_TRACKED', 2);

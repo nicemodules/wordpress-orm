@@ -1,8 +1,8 @@
 <?php
 
-namespace Symlink\ORM;
+namespace NiceModules\ORM;
 
-use Symlink\ORM\Repositories\BaseRepository;
+use NiceModules\ORM\Repositories\BaseRepository;
 
 class QueryBuilder {
 
@@ -20,7 +20,7 @@ class QueryBuilder {
 
   /**
    * Reference to the repository.
-   * @var \Symlink\ORM\Repositories\BaseRepository
+   * @var \NiceModules\ORM\Repositories\BaseRepository
    */
   private $repository;
 
@@ -45,14 +45,14 @@ class QueryBuilder {
    * @param $operator
    *
    * @return $this
-   * @throws \Symlink\ORM\Exceptions\InvalidOperatorException
-   * @throws \Symlink\ORM\Exceptions\PropertyDoesNotExistException
+   * @throws \NiceModules\ORM\Exceptions\InvalidOperatorException
+   * @throws \NiceModules\ORM\Exceptions\PropertyDoesNotExistException
    */
   public function where($property, $value, $operator) {
 
     // Check the property exists.
     if (!in_array($property, $this->repository->getObjectProperties()) && $property != 'ID') {
-      throw new \Symlink\ORM\Exceptions\PropertyDoesNotExistException(sprintf(__('Property %s does not exist in model %s.'), $property, $this->repository->getObjectClass()));
+      throw new \NiceModules\ORM\Exceptions\PropertyDoesNotExistException(sprintf(__('Property %s does not exist in model %s.'), $property, $this->repository->getObjectClass()));
     }
 
     // Check the operator is valid.
@@ -67,7 +67,7 @@ class QueryBuilder {
       'NOT IN'
     ])
     ) {
-      throw new \Symlink\ORM\Exceptions\InvalidOperatorException(sprintf(__('Operator %s is not valid.'), $operator));
+      throw new \NiceModules\ORM\Exceptions\InvalidOperatorException(sprintf(__('Operator %s is not valid.'), $operator));
     }
 
     // Add the entry.
@@ -88,14 +88,14 @@ class QueryBuilder {
    * @param $operator
    *
    * @return $this
-   * @throws \Symlink\ORM\Exceptions\InvalidOperatorException
-   * @throws \Symlink\ORM\Exceptions\PropertyDoesNotExistException
+   * @throws \NiceModules\ORM\Exceptions\InvalidOperatorException
+   * @throws \NiceModules\ORM\Exceptions\PropertyDoesNotExistException
    */
   public function orderBy($property, $operator) {
 
     // Check the property exists.
     if (!in_array($property, $this->repository->getObjectProperties()) && $property != 'ID') {
-      throw new \Symlink\ORM\Exceptions\PropertyDoesNotExistException(sprintf(__('Property %s does not exist in model %s.'), $property, $this->repository->getObjectClass()));
+      throw new \NiceModules\ORM\Exceptions\PropertyDoesNotExistException(sprintf(__('Property %s does not exist in model %s.'), $property, $this->repository->getObjectClass()));
     }
 
     // Check the operator is valid.
@@ -104,7 +104,7 @@ class QueryBuilder {
       'DESC',
     ])
     ) {
-      throw new \Symlink\ORM\Exceptions\InvalidOperatorException(sprintf(__('Operator %s is not valid.'), $operator));
+      throw new \NiceModules\ORM\Exceptions\InvalidOperatorException(sprintf(__('Operator %s is not valid.'), $operator));
     }
 
     // Save it
@@ -194,7 +194,7 @@ class QueryBuilder {
    * @param bool $always_array
    *
    * @return array|bool|mixed
-   * @throws \Symlink\ORM\Exceptions\NoQueryException
+   * @throws \NiceModules\ORM\Exceptions\NoQueryException
    */
   public function getResults($always_array = FALSE) {
     global $wpdb;
@@ -238,7 +238,7 @@ class QueryBuilder {
 
     }
     else {
-      throw new \Symlink\ORM\Exceptions\NoQueryException(__('No query was built. Run ->buildQuery() first.'));
+      throw new \NiceModules\ORM\Exceptions\NoQueryException(__('No query was built. Run ->buildQuery() first.'));
     }
   }
 }

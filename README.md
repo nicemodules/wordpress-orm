@@ -1,37 +1,9 @@
-# WORM (Wordpress ORM)
-
-*Under active development*
-
-A lightweight, Doctrine style ORM for Wordpress 4.8+. Requires PHP 5.5+
-
-This library borrows a lot of concepts from Doctrine for Symfony including the mapper, entity manager, repositories,
-one-to-many entity relationships, lazy-loading of related entities and a query builder.  
-
-It acts as a layer sitting on top of the internal Wordpress `$wpdb` class. 
-
-All queries are run through the internal Wordpress `$wpdb->prepare()` function to protect against SQL injection
-attacks. 
-
-## Why?
-
-I came to Wordpress from a Symfony development background. I wanted to work with objects instead of manually writing
-SQL queries. I looked around for a good ORM and was unable to find anything that fulfilled my requirements. 
-
-Getting Doctrine to work with Wordpress was complex and seemed like overkill as it's a very heavy weight library. 
-
-There's also: https://github.com/tareq1988/wp-eloquent which is really good, but is more of a query builder for
-existing Wordpress tables.
-
 ## Version history
 
-master branch = active development
-
-0.1.0 tag = previous master. The version most people would be using circa last 2022.  
 
 ## Installation
-
 ```
-composer require rjjakes/wordpress-orm
+composer require nicemodules/wordpress-orm
 ```
 
 ## Usage
@@ -50,7 +22,7 @@ Example:
 
 namespace App\Models;
 
-use Symlink\ORM\Models\BaseModel as Model;
+use NiceModules\ORM\Models\BaseModel as Model;
 
 /**
  * @ORM_Type Entity
@@ -115,7 +87,7 @@ Once you have a model object, you need to tell Wordpress to create a table to ma
 Use the mapper class:
 
 ```php
-use Symlink\ORM\Mapping;
+use NiceModules\ORM\Mapping;
 ```
 
 
@@ -144,7 +116,7 @@ made a change to your model schema and want to apply it to the database
 Use the ORM manager: 
 
 ```php
-use Symlink\ORM\Manager;
+use NiceModules\ORM\Manager;
 ```
 
 Create a new instance of your model:
@@ -187,7 +159,7 @@ Now check your database and you'll see a new row containing your model data.
 Use the ORM manager: 
 
 ```php
-use Symlink\ORM\Manager;
+use NiceModules\ORM\Manager;
 ```
 
 Get an instance of the ORM manager class. 
@@ -336,7 +308,7 @@ function as part of your uninstall hook.
 Use the mapper class:
 
 ```php
-use Symlink\ORM\Mapping;
+use NiceModules\ORM\Mapping;
 ```
 
 
@@ -373,7 +345,7 @@ try {
     $query = $repository->createQueryBuilder()
       ->where('ID', 3, '==')  // Equals operator should be '=' not '=='
       ->buildQuery();
-} catch (\Symlink\ORM\Exceptions\InvalidOperatorException $e) {
+} catch (\NiceModules\ORM\Exceptions\InvalidOperatorException $e) {
     // ... warn the user about the bad operator or handle it another way. 
 }
 
@@ -409,7 +381,4 @@ https://github.com/myclabs/deepcopy
 
 ## Credits
 
-Maintained by: https://github.com/rjjakes
-
-This library is under active development, so I'll happily accept comments, issues and pull requests. 
-
+Forked from [rjjakes/wordpress-orm](https://github.com/rjjakes/wordpress-orm) by Ray Jakes

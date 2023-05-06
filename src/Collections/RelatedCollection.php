@@ -1,6 +1,6 @@
 <?php
 
-namespace Symlink\ORM\Collections;
+namespace NiceModules\ORM\Collections;
 
 // http://fabien.potencier.org/iterator-or-iteratoraggregate.html
 

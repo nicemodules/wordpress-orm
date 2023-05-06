@@ -1,15 +1,15 @@
 <?php
 
-namespace Symlink\ORM;
+namespace NiceModules\ORM;
 
-use Symlink\ORM\Models\BaseModel;
-use Symlink\ORM\Repositories\BaseRepository;
-use Symlink\ORM\Collections\TrackedCollection;
+use NiceModules\ORM\Models\BaseModel;
+use NiceModules\ORM\Repositories\BaseRepository;
+use NiceModules\ORM\Collections\TrackedCollection;
 
 class Manager {
 
   /**
-   * @var \Symlink\ORM\Manager
+   * @var \NiceModules\ORM\Manager
    */
   private static $manager_service = NULL;
 
@@ -25,7 +25,7 @@ class Manager {
    * Initializes a non static copy of itself when called. Subsequent calls
    * return the same object (fake dependency injection/service).
    *
-   * @return \Symlink\ORM\Manager
+   * @return \NiceModules\ORM\Manager
    */
   public static function getManager() {
     // Initialize the service if it's not already set.
@@ -49,7 +49,7 @@ class Manager {
    *
    * @param $classname
    *
-   * @return \Symlink\ORM\Repositories\BaseRepository
+   * @return \NiceModules\ORM\Repositories\BaseRepository
    */
   public function getRepository($classname) {
 
@@ -80,7 +80,7 @@ class Manager {
   /**
    * Start tracking a model known to exist in the database.
    *
-   * @param \Symlink\ORM\Models\BaseModel $object
+   * @param \NiceModules\ORM\Models\BaseModel $object
    */
   public function track(BaseModel $object) {
     // Save it against the key.
@@ -99,7 +99,7 @@ class Manager {
   /**
    * Start tracking a model known to exist in the database.
    *
-   * @param \Symlink\ORM\Models\BaseModel $object
+   * @param \NiceModules\ORM\Models\BaseModel $object
    */
   public function clean(BaseModel $object) {
     // Save it against the key.
@@ -111,7 +111,7 @@ class Manager {
    * This will perform one query per table no matter how many records need to
    * be added.
    *
-   * @throws \Symlink\ORM\Exceptions\FailedToInsertException
+   * @throws \NiceModules\ORM\Exceptions\FailedToInsertException
    */
   private function _flush_insert() {
     global $wpdb;
@@ -155,7 +155,7 @@ class Manager {
         }
         // Something went wrong.
         else {
-          throw new \Symlink\ORM\Exceptions\FailedToInsertException(__('Failed to insert one or more records into the database.'));
+          throw new \NiceModules\ORM\Exceptions\FailedToInsertException(__('Failed to insert one or more records into the database.'));
         }
       }
     }
@@ -221,7 +221,7 @@ class Manager {
         }
         // Something went wrong.
         else {
-          throw new \Symlink\ORM\Exceptions\FailedToInsertException(__('Failed to update one or more records in the database.'));
+          throw new \NiceModules\ORM\Exceptions\FailedToInsertException(__('Failed to update one or more records in the database.'));
         }
 
       }
@@ -265,7 +265,7 @@ class Manager {
    * Apply changes to all models queued up with persist().
    * Attempts to combine queries to reduce MySQL load.
    *
-   * @throws \Symlink\ORM\Exceptions\FailedToInsertException
+   * @throws \NiceModules\ORM\Exceptions\FailedToInsertException
    */
   public function flush() {
     $this->_flush_update();

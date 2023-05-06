@@ -1,15 +1,15 @@
 <?php
 
-namespace Symlink\ORM\Models;
+namespace NiceModules\ORM\Models;
 
-use Symlink\ORM\Mapping as ORM;
-use Symlink\ORM\Models\IdModel;
+use NiceModules\ORM\Mapping as ORM;
+use NiceModules\ORM\Models\IdModel;
 
 /**
  * @ORM_Type Entity
  * @ORM_Table "posts"
  * @ORM_AllowSchemaUpdate False
- * @ORM_Repository \Symlink\ORM\Repositories\PostsRepository
+ * @ORM_Repository \NiceModules\ORM\Repositories\PostsRepository
  */
 class Posts extends IdModel {
 
@@ -17,7 +17,7 @@ class Posts extends IdModel {
    * @ORM_Column_Type bigint
    * @ORM_Column_Length 20
    * @ORM_Column_Null NOT NULL
-   * @ORM_ManyToOne \Symlink\ORM\Models\Users
+   * @ORM_ManyToOne \NiceModules\ORM\Models\Users
    * @ORM_JoinProperty ID
    */
   protected $post_author;

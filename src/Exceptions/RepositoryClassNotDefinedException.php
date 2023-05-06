@@ -1,11 +1,11 @@
 <?php
 
-namespace Symlink\ORM\Exceptions;
+namespace NiceModules\ORM\Exceptions;
 
 /**
  * Class RepositoryClassNotDefined
  *
- * @package Symlink\ORM
+ * @package NiceModules\ORM
  */
 class RepositoryClassNotDefinedException extends \Exception {
 }

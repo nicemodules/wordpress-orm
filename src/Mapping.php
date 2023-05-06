@@ -1,6 +1,6 @@
 <?php
 
-namespace Symlink\ORM;
+namespace NiceModules\ORM;
 
 use Minime\Annotations\Reader;
 use Minime\Annotations\AnnotationsBag;
@@ -8,7 +8,7 @@ use Minime\Annotations\AnnotationsBag;
 class Mapping {
 
   /**
-   * @var \Symlink\ORM\Manager
+   * @var \NiceModules\ORM\Manager
    */
   private static $mapping_service = NULL;
 
@@ -28,7 +28,7 @@ class Mapping {
    * Initializes a non static copy of itself when called. Subsequent calls
    * return the same object (fake dependency injection/service).
    *
-   * @return \Symlink\ORM\Mapping
+   * @return \NiceModules\ORM\Mapping
    */
   public static function getMapper() {
     // Initialize the service if it's not already set.
@@ -73,9 +73,9 @@ class Mapping {
    * @param $classname
    *
    * @return mixed
-   * @throws \Symlink\ORM\Exceptions\RepositoryClassNotDefinedException
-   * @throws \Symlink\ORM\Exceptions\RequiredAnnotationMissingException
-   * @throws \Symlink\ORM\Exceptions\UnknownColumnTypeException
+   * @throws \NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException
+   * @throws \NiceModules\ORM\Exceptions\RequiredAnnotationMissingException
+   * @throws \NiceModules\ORM\Exceptions\UnknownColumnTypeException
    */
   public function getProcessed($classname) {
 
@@ -87,7 +87,7 @@ class Mapping {
       if (!$class_annotations->get('ORM_Type')) {
         $this->models[$classname]['validated'] = FALSE;
 
-        throw new \Symlink\ORM\Exceptions\RequiredAnnotationMissingException(sprintf(__('The annotation ORM_Type does not exist on the model %s.'), $classname));
+        throw new \NiceModules\ORM\Exceptions\RequiredAnnotationMissingException(sprintf(__('The annotation ORM_Type does not exist on the model %s.'), $classname));
       }
       else {
         $this->models[$classname]['ORM_Type'] = $class_annotations->get('ORM_Type');
@@ -96,7 +96,7 @@ class Mapping {
       // Validate @ORM_Table
       if (!$class_annotations->get('ORM_Table')) {
         $this->models[$classname]['validated'] = FALSE;
-        throw new \Symlink\ORM\Exceptions\RequiredAnnotationMissingException(sprintf(__('The annotation ORM_Table does not exist on the model %s.'), $classname));
+        throw new \NiceModules\ORM\Exceptions\RequiredAnnotationMissingException(sprintf(__('The annotation ORM_Table does not exist on the model %s.'), $classname));
       }
       else {
         $this->models[$classname]['ORM_Table'] = $class_annotations->get('ORM_Table');
@@ -105,7 +105,7 @@ class Mapping {
       // Validate @ORM_AllowSchemaUpdate
       if (!$class_annotations->get('ORM_AllowSchemaUpdate')) {
         $this->models[$classname]['validated'] = FALSE;
-        throw new \Symlink\ORM\Exceptions\RequiredAnnotationMissingException(sprintf(__('The annotation ORM_AllowSchemaUpdate does not exist on the model.'), $classname));
+        throw new \NiceModules\ORM\Exceptions\RequiredAnnotationMissingException(sprintf(__('The annotation ORM_AllowSchemaUpdate does not exist on the model.'), $classname));
       }
       else {
         $this->models[$classname]['ORM_AllowSchemaUpdate'] = filter_var($class_annotations->get('ORM_AllowSchemaUpdate'), FILTER_VALIDATE_BOOLEAN);;
@@ -114,7 +114,7 @@ class Mapping {
       // Validate @ORM_Repository
       if ($class_annotations->get('ORM_Repository')) {
         if (!class_exists($class_annotations->get('ORM_Repository'))) {
-          throw new \Symlink\ORM\Exceptions\RepositoryClassNotDefinedException(sprintf(__('Repository class %s does not exist on model %s.'), $class_annotations->get('ORM_Repository'), $classname));
+          throw new \NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException(sprintf(__('Repository class %s does not exist on model %s.'), $class_annotations->get('ORM_Repository'), $classname));
         }
         else {
           $this->models[$classname]['ORM_Repository'] = $class_annotations->get('ORM_Repository');
@@ -154,7 +154,7 @@ class Mapping {
             'float',
           ])
           ) {
-            throw new \Symlink\ORM\Exceptions\UnknownColumnTypeException(sprintf(__('Unknown model property column type %s set in @ORM_Column_Type on model %s..'), $column_type, $classname));
+            throw new \NiceModules\ORM\Exceptions\UnknownColumnTypeException(sprintf(__('Unknown model property column type %s set in @ORM_Column_Type on model %s..'), $column_type, $classname));
           }
 
           // Build the rest of the schema partial.
@@ -204,7 +204,7 @@ class Mapping {
    *
    * @param $classname
    *
-   * @throws \Symlink\ORM\Exceptions\AllowSchemaUpdateIsFalseException
+   * @throws \NiceModules\ORM\Exceptions\AllowSchemaUpdateIsFalseException
    */
   public function updateSchema($classname) {
     global $wpdb;
@@ -214,7 +214,7 @@ class Mapping {
 
     // Are we allowed to update the schema of this model in the db?
     if (!$mapped['ORM_AllowSchemaUpdate']) {
-      throw new \Symlink\ORM\Exceptions\AllowSchemaUpdateIsFalseException(sprintf(__('Refused to update model schema %s. ORM_AllowSchemaUpdate is FALSE.'), $classname));
+      throw new \NiceModules\ORM\Exceptions\AllowSchemaUpdateIsFalseException(sprintf(__('Refused to update model schema %s. ORM_AllowSchemaUpdate is FALSE.'), $classname));
     }
 
     // Create an ID type string.
@@ -245,7 +245,7 @@ class Mapping {
 
     // Are we allowed to update the schema of this model in the db?
     if (!$mapped['ORM_AllowSchemaUpdate']) {
-      throw new \Symlink\ORM\Exceptions\AllowSchemaUpdateIsFalseException(sprintf(__('Refused to drop table for model %s. ORM_AllowSchemaUpdate is FALSE.'), $classname));
+      throw new \NiceModules\ORM\Exceptions\AllowSchemaUpdateIsFalseException(sprintf(__('Refused to drop table for model %s. ORM_AllowSchemaUpdate is FALSE.'), $classname));
     }
 
     // Drop the table.

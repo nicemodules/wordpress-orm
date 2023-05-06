@@ -1,10 +1,10 @@
 {
-  "name": "rjjakes/wordpress-orm",
+  "name": "nicemodules/wordpress-orm",
   "description": "WORM. Doctrine style ORM for Wordpress.",
   "keywords": ["wordpress", "plugin", "orm", "doctrine", "composer", "sql"],
-  "homepage": "https://github.com/rjjakes/wordpress-orm",
+  "homepage": "https://github.com/nicemodules/wordpress-orm",
   "require": {
-    "php": ">=5.5",
+    "php": ">=7.4",
     "minime/annotations": "^3.1"
   },
   "license": "MIT",
@@ -12,11 +12,15 @@
     {
       "name": "Ray Jakes",
       "email": "symlinkdigital@gmail.com"
+    },
+    {
+      "name": "jedrek",
+      "email": "nicemodules@gmail.com"
     }
   ],
   "autoload" : {
     "psr-4" : {
-      "Symlink\\ORM\\": "src/"
+      "NiceModules\\ORM\\": "src/"
     }
   },
   "minimum-stability": "stable"

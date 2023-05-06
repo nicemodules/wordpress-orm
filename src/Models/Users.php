@@ -1,15 +1,15 @@
 <?php
 
-namespace Symlink\ORM\Models;
+namespace NiceModules\ORM\Models;
 
-use Symlink\ORM\Mapping as ORM;
-use Symlink\ORM\Models\IdModel;
+use NiceModules\ORM\Mapping as ORM;
+use NiceModules\ORM\Models\IdModel;
 
 /**
  * @ORM_Type Entity
  * @ORM_Table "users"
  * @ORM_AllowSchemaUpdate False
- * @ORM_Repository \Symlink\ORM\Repositories\UsersRepository
+ * @ORM_Repository \NiceModules\ORM\Repositories\UsersRepository
  */
 class Users extends IdModel {
 

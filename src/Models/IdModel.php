@@ -1,9 +1,9 @@
 <?php
 
-namespace Symlink\ORM\Models;
+namespace NiceModules\ORM\Models;
 
-use Symlink\ORM\Manager;
-use Symlink\ORM\Mapping;
+use NiceModules\ORM\Manager;
+use NiceModules\ORM\Mapping;
 
 abstract class IdModel extends BaseModel {
 

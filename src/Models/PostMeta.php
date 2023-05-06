@@ -1,9 +1,9 @@
 <?php
 
-namespace Symlink\ORM\Models;
+namespace NiceModules\ORM\Models;
 
-use Symlink\ORM\Mapping as ORM;
-use Symlink\ORM\Models\BaseModel;
+use NiceModules\ORM\Mapping as ORM;
+use NiceModules\ORM\Models\BaseModel;
 
 /**
  * @ORM_Type Entity

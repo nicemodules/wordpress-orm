@@ -1,11 +1,11 @@
 <?php
 
-namespace Symlink\ORM\Exceptions;
+namespace NiceModules\ORM\Exceptions;
 
 /**
  * Class AllowSchemaUpdateIsFalseException
  *
- * @package Symlink\ORM
+ * @package NiceModules\ORM
  */
 class AllowSchemaUpdateIsFalseException extends \Exception {
 }

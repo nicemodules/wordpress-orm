@@ -1,9 +1,9 @@
 <?php
 
-namespace Symlink\ORM\Models;
+namespace NiceModules\ORM\Models;
 
-use Symlink\ORM\Manager;
-use Symlink\ORM\Mapping;
+use NiceModules\ORM\Manager;
+use NiceModules\ORM\Mapping;
 
 abstract class BaseModel {
 
@@ -104,7 +104,7 @@ abstract class BaseModel {
    * @param $property
    *
    * @return mixed
-   * @throws \Symlink\ORM\Exceptions\PropertyDoesNotExistException
+   * @throws \NiceModules\ORM\Exceptions\PropertyDoesNotExistException
    */
   final public function getDBValue($property) {
     return $this->get($property);
@@ -116,12 +116,12 @@ abstract class BaseModel {
    * @param $property
    *
    * @return mixed
-   * @throws \Symlink\ORM\Exceptions\PropertyDoesNotExistException
+   * @throws \NiceModules\ORM\Exceptions\PropertyDoesNotExistException
    */
   final public function get($property) {
     // Check to see if the property exists on the model.
     if (!property_exists($this, $property)) {
-      throw new \Symlink\ORM\Exceptions\PropertyDoesNotExistException(sprintf(__('The property %s does not exist on the model %s.'), $property, get_class($this)));
+      throw new \NiceModules\ORM\Exceptions\PropertyDoesNotExistException(sprintf(__('The property %s does not exist on the model %s.'), $property, get_class($this)));
     }
 
     // If this property is a ManyToOne, check to see if it's an object and lazy
@@ -171,12 +171,12 @@ abstract class BaseModel {
    * @param $value
    *
    * @return bool
-   * @throws \Symlink\ORM\Exceptions\PropertyDoesNotExistException
+   * @throws \NiceModules\ORM\Exceptions\PropertyDoesNotExistException
    */
   final public function set($column, $value) {
     // Check to see if the property exists on the model.
     if (!property_exists($this, $column)) {
-      throw new \Symlink\ORM\Exceptions\PropertyDoesNotExistException(sprintf(__('The property %s does not exist on the model %s.'), $column, get_class($this)));
+      throw new \NiceModules\ORM\Exceptions\PropertyDoesNotExistException(sprintf(__('The property %s does not exist on the model %s.'), $column, get_class($this)));
     }
 
     // Update the model with the value.

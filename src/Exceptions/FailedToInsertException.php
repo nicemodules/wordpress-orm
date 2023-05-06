@@ -1,11 +1,11 @@
 <?php
 
-namespace Symlink\ORM\Exceptions;
+namespace NiceModules\ORM\Exceptions;
 
 /**
  * Class FailedToInsertException
  *
- * @package Symlink\ORM
+ * @package NiceModules\ORM
  */
 class FailedToInsertException extends \Exception {
 }

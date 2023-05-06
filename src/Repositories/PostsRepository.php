@@ -1,6 +1,6 @@
 <?php
 
-namespace Symlink\ORM\Repositories;
+namespace NiceModules\ORM\Repositories;
 
 class PostsRepository extends BaseRepository {
 }
