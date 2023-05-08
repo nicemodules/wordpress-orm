@@ -15,7 +15,6 @@ use NiceModules\ORM\Annotations\Table;
  */
 class Posts extends IdModel
 {
-
     /**
      * @Column(
      *     type="bigint",

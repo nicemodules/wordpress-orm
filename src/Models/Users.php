@@ -2,73 +2,61 @@
 
 namespace NiceModules\ORM\Models;
 
+use NiceModules\ORM\Annotations\Column;
+use NiceModules\ORM\Annotations\Table;
+
 /**
- * @ORM_Type Entity
- * @ORM_Table "users"
- * @ORM_AllowSchemaUpdate False
- * @ORM_Repository \NiceModules\ORM\Repositories\UsersRepository
+ * @Table(type="Entity", 
+ *     name="users", 
+ *     allow_schema_update=false, 
+ *     repository="\NiceModules\ORM\Repositories\UsersRepository"
+ * )
  */
 class Users extends IdModel
 {
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 60
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="60", null="NOT NULL");
      */
     protected $user_login;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 255
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="255", null="NOT NULL");
      */
     protected $user_pass;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 50
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="50", null="NOT NULL");
      */
     protected $user_nicename;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 100
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="100", null="NOT NULL");
      */
     protected $user_email;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 100
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="100", null="NOT NULL");
      */
     protected $user_url;
 
     /**
-     * @ORM_Column_Type datetime
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="datetime", null="NOT NULL");
      */
     protected $user_registered;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 255
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="255", null="NOT NULL");
      */
     protected $user_activation_key;
 
     /**
-     * @ORM_Column_Type int
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="int", null="NOT NULL");
      */
     protected $user_status;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 250
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="250", null="NOT NULL");
      */
     protected $display_name;
 
