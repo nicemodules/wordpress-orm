@@ -11,6 +11,6 @@ class Column
     public string $length;
     public string $null;
     public string $default;
-    public bool $join_property;
+    public string $join_property;
     public string $many_to_one;
 }

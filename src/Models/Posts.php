@@ -2,158 +2,133 @@
 
 namespace NiceModules\ORM\Models;
 
+use NiceModules\ORM\Annotations\Column;
+use NiceModules\ORM\Annotations\Table;
+
 /**
- * @ORM_Type Entity
- * @ORM_Table "posts"
- * @ORM_AllowSchemaUpdate False
- * @ORM_Repository \NiceModules\ORM\Repositories\PostsRepository
+ * @Table(
+ *     type="Entity",
+ *     name="posts",
+ *     allow_schema_update=false,
+ *     repository="\NiceModules\ORM\Repositories\PostsRepository"
+ * )
  */
 class Posts extends IdModel
 {
 
     /**
-     * @ORM_Column_Type bigint
-     * @ORM_Column_Length 20
-     * @ORM_Column_Null NOT NULL
-     * @ORM_ManyToOne \NiceModules\ORM\Models\Users
-     * @ORM_JoinProperty ID
+     * @Column(
+     *     type="bigint",
+     *     length="20",
+     *     null="NOT NULL",
+     *     many_to_one=\NiceModules\ORM\Models\Users",
+     *     join_property="ID"
+     * )
      */
     protected $post_author;
 
     /**
-     * @ORM_Column_Type datetime
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="datetime", null="NOT NULL")
      */
     protected $post_date;
 
     /**
-     * @ORM_Column_Type datetime
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="datetime", null="NOT NULL")
      */
     protected $post_date_gmt;
 
     /**
-     * @ORM_Column_Type longtext
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="longtext", null="NOT NULL")
      */
     protected $post_content;
 
     /**
-     * @ORM_Column_Type text
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="text", null="NOT NULL")
      */
     protected $post_title;
 
     /**
-     * @ORM_Column_Type text
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="text", null="NOT NULL")
      */
     protected $post_excerpt;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 20
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="20", null="NOT NULL")
      */
     protected $post_status;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 20
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="20", null="NOT NULL")
      */
     protected $comment_status;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 20
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="20", null="NOT NULL")
      */
     protected $ping_status;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 255
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="255", null="NOT NULL")
      */
     protected $post_password;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 255
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="255", null="NOT NULL")
      */
     protected $post_name;
 
     /**
-     * @ORM_Column_Type text
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="text", null="NOT NULL")
      */
     protected $to_ping;
 
     /**
-     * @ORM_Column_Type text
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="text", null="NOT NULL")
      */
     protected $pinged;
 
     /**
-     * @ORM_Column_Type datetime
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="datetime", null="NOT NULL")
      */
     protected $post_modified;
 
     /**
-     * @ORM_Column_Type datetime
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="datetime", null="NOT NULL")
      */
     protected $post_modified_gmt;
 
     /**
-     * @ORM_Column_Type longtext
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="longtext", null="NOT NULL")
      */
     protected $post_content_filtered;
 
     /**
-     * @ORM_Column_Type bigint
-     * @ORM_Column_Length 20
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="bigint", length="20", null="NOT NULL")
      */
     protected $post_parent;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 255
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="255", null="NOT NULL")
      */
     protected $guid;
 
     /**
-     * @ORM_Column_Type int
-     * @ORM_Column_Length 11
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="int", length="11", null="NOT NULL")
      */
     protected $menu_order;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 20
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="20", null="NOT NULL")
      */
     protected $post_type;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 100
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="varchar", length="100", null="NOT NULL")
      */
     protected $post_mime_type;
 
     /**
-     * @ORM_Column_Type bigint
-     * @ORM_Column_Length 20
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="bigint", length="20", null="NOT NULL")
      */
     protected $comment_count;
 
