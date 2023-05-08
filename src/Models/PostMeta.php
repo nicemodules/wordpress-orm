@@ -2,36 +2,35 @@
 
 namespace NiceModules\ORM\Models;
 
+use NiceModules\ORM\Annotations\Column;
+use NiceModules\ORM\Annotations\Table;
+
 /**
- * @ORM_Type Entity
- * @ORM_Table "postmeta"
- * @ORM_AllowSchemaUpdate False
+ * @Table(
+ *     type="Entity",
+ *     name="postmeta",
+ *     allow_schema_update=false,
+ * )
  */
 class PostMeta extends BaseModel
 {
-
     /**
-     * @ORM_Column_Type bigint
-     * @ORM_Column_Length 20
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="bigint", length="20", null="NOT NULL");
      */
     protected $meta_id;
 
     /**
-     * @ORM_Column_Type bigint
-     * @ORM_Column_Length 20
-     * @ORM_Column_Null NOT NULL
+     * @Column(type="bigint", length="20", null="NOT NULL");
      */
     protected $post_id;
 
     /**
-     * @ORM_Column_Type varchar
-     * @ORM_Column_Length 255
+     * @Column(type="varchar", length="255");
      */
     protected $meta_key;
 
     /**
-     * @ORM_Column_Type longtext
+     * @Column(type="longtext");
      */
     protected $meta_value;
 
