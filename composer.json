@@ -1,11 +1,19 @@
 {
   "name": "nicemodules/wordpress-orm",
   "description": "WORM. Doctrine style ORM for Wordpress.",
-  "keywords": ["wordpress", "plugin", "orm", "doctrine", "composer", "sql"],
+  "keywords": [
+    "wordpress",
+    "plugin",
+    "orm",
+    "doctrine",
+    "composer",
+    "sql"
+  ],
   "homepage": "https://github.com/nicemodules/wordpress-orm",
   "require": {
     "php": ">=7.4",
-    "doctrine/annotations": "^2.0"
+    "doctrine/annotations": "^2.0",
+    "phpunit/phpunit": "^9.6"
   },
   "license": "MIT",
   "authors": [
@@ -18,8 +26,8 @@
       "email": "nicemodules@gmail.com"
     }
   ],
-  "autoload" : {
-    "psr-4" : {
+  "autoload": {
+    "psr-4": {
       "NiceModules\\ORM\\": "src/"
     }
   },

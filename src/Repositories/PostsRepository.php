@@ -2,5 +2,6 @@
 
 namespace NiceModules\ORM\Repositories;
 
-class PostsRepository extends BaseRepository {
+class PostsRepository extends BaseRepository
+{
 }

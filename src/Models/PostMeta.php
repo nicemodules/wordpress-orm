@@ -2,15 +2,13 @@
 
 namespace NiceModules\ORM\Models;
 
-use NiceModules\ORM\Mapping as ORM;
-use NiceModules\ORM\Models\BaseModel;
-
 /**
  * @ORM_Type Entity
  * @ORM_Table "postmeta"
  * @ORM_AllowSchemaUpdate False
  */
-class PostMeta extends BaseModel {
+class PostMeta extends BaseModel
+{
 
     /**
      * @ORM_Column_Type bigint
@@ -36,7 +34,6 @@ class PostMeta extends BaseModel {
      * @ORM_Column_Type longtext
      */
     protected $meta_value;
-
 
 
 }
