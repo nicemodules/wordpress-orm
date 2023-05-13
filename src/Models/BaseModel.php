@@ -3,6 +3,7 @@
 namespace NiceModules\ORM\Models;
 
 use NiceModules\ORM\Annotations\Column;
+use NiceModules\ORM\Annotations\Table;
 use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
 use NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException;
 use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
@@ -11,10 +12,13 @@ use NiceModules\ORM\Manager;
 use NiceModules\ORM\Mapper;
 use ReflectionException;
 
+/**
+ * @Table(column_order={"ID"})
+ */
 abstract class BaseModel
 {
     /**
-     * @Column(type = "int", length = 10)
+     * @Column(type="int", length="10", null="NOT NULL", primary=true)
      */
     protected int $ID;
 
@@ -38,7 +42,7 @@ abstract class BaseModel
     {
         $class_name = get_class($this);
         $object = new $class_name;
-        
+
         $schema = Mapper::instance($class_name)->getSchemas();
 
         foreach (array_keys($schema) as $property) {
@@ -151,15 +155,13 @@ abstract class BaseModel
     {
         // Check to see if the property exists on the model.
         if (!property_exists($this, $property)) {
-            throw new PropertyDoesNotExistException(
-                sprintf(__('The property %s does not exist on the model %s.'), $property, get_class($this))
-            );
+            throw new PropertyDoesNotExistException($property, self::class);
         }
 
         // If this property is a ManyToOne, check to see if it's an object and lazy
         // load it if not.
         $many_to_one_class = Mapper::instance(self::class)->getColumn($property)->many_to_one;
-        
+
         /** @var string $many_to_one_property */
         $many_to_one_property = Mapper::instance(self::class)->getColumn($property)->join_property;
 
@@ -207,13 +209,11 @@ abstract class BaseModel
      * @return bool
      * @throws PropertyDoesNotExistException
      */
-    final public function set($column, $value)
+    final public function set($column, $value): bool
     {
         // Check to see if the property exists on the model.
         if (!property_exists($this, $column)) {
-            throw new PropertyDoesNotExistException(
-                sprintf(__('The property %s does not exist on the model %s.'), $column, get_class($this))
-            );
+            throw new PropertyDoesNotExistException($column, self::class);
         }
 
         // Update the model with the value.
@@ -221,5 +221,4 @@ abstract class BaseModel
 
         return true;
     }
-
 }

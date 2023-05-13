@@ -57,9 +57,7 @@ class QueryBuilder
     {
         // Check the property exists.
         if (!in_array($property, $this->repository->getObjectProperties()) && $property != 'ID') {
-            throw new PropertyDoesNotExistException(
-                sprintf(__('Property %s does not exist in model %s.'), $property, $this->repository->getObjectClass())
-            );
+            throw new PropertyDoesNotExistException($property, $this->repository->getObjectClass());
         }
 
         // Check the operator is valid.
@@ -74,9 +72,7 @@ class QueryBuilder
             'NOT IN'
         ])
         ) {
-            throw new InvalidOperatorException(
-                sprintf(__('Operator %s is not valid.'), $operator)
-            );
+            throw new InvalidOperatorException($operator);
         }
 
         // Add the entry.
@@ -104,9 +100,7 @@ class QueryBuilder
     {
         // Check the property exists.
         if (!in_array($property, $this->repository->getObjectProperties()) && $property != 'ID') {
-            throw new PropertyDoesNotExistException(
-                sprintf(__('Property %s does not exist in model %s.'), $property, $this->repository->getObjectClass())
-            );
+            throw new PropertyDoesNotExistException($property, $this->repository->getObjectClass());
         }
 
         // Check the operator is valid.
@@ -115,9 +109,7 @@ class QueryBuilder
             'DESC',
         ])
         ) {
-            throw new InvalidOperatorException(
-                sprintf(__('Operator %s is not valid.'), $operator)
-            );
+            throw new InvalidOperatorException($operator);
         }
 
         // Save it
@@ -160,7 +152,8 @@ class QueryBuilder
 
         $values = [];
 
-        $sql = "SELECT * FROM " . Mapper::instance($this->repository->getObjectClass())->getPrefix() . $this->repository->getDBTable() . " ";
+        $sql = "SELECT * FROM " . Mapper::instance($this->repository->getObjectClass())->getPrefix(
+            ) . $this->repository->getDBTable() . " ";
 
         // Combine the WHERE clauses and add to the SQL statement.
         if (count($this->where)) {
@@ -260,7 +253,7 @@ class QueryBuilder
             // Otherwise, the return an array of objects.
             return $objects;
         } else {
-            throw new NoQueryException(__('No query was built. Run ->buildQuery() first.'));
+            throw new NoQueryException();
         }
     }
 }

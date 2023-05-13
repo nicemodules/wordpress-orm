@@ -9,6 +9,8 @@ use Exception;
  *
  * @package NiceModules\ORM
  */
-class NoQueryException extends Exception
+class NoQueryException extends ErrorArgsException
 {
+    protected static string $error = 'No query was built. Run ->buildQuery() first.';
+    
 }

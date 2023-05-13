@@ -9,6 +9,16 @@ use Exception;
  *
  * @package NiceModules\ORM
  */
-class InvalidOperatorException extends Exception
+class InvalidOperatorException extends ErrorArgsException
 {
+    protected static string $error = 'Operator %s is not valid.';
+
+    /**
+     * @param string $operator
+     */
+    public function __construct(string $operator)
+    {
+        parent::__construct($operator);
+    }
+    
 }

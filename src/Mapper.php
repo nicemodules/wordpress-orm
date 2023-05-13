@@ -5,12 +5,15 @@ namespace NiceModules\ORM;
 use Doctrine\Common\Annotations\AnnotationReader;
 use NiceModules\ORM\Annotations\Column;
 use NiceModules\ORM\Annotations\Table;
+use NiceModules\ORM\Exceptions\AllowDropIsFalseException;
 use NiceModules\ORM\Exceptions\AllowSchemaUpdateIsFalseException;
+use NiceModules\ORM\Exceptions\IncompleteIndexException;
 use NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException;
 use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
 use NiceModules\ORM\Exceptions\UnknownColumnTypeException;
 use ReflectionClass;
 use ReflectionException;
+use ReflectionProperty;
 
 class Mapper
 {
@@ -32,30 +35,32 @@ class Mapper
     private array $columns = [];
     private array $schemas = [];
     private array $placeholders = [];
+    private array $primaryKeys = [];
+    private bool $validated = true;
 
     /**
      * Initializes a non static copy of itself when called. Subsequent calls
      * return the same object (fake dependency injection/service).
      *
-     * @param $className
+     * @param $modelClassName
      * @return Mapper
      * @throws ReflectionException
      * @throws RepositoryClassNotDefinedException
      * @throws RequiredAnnotationMissingException
      * @throws UnknownColumnTypeException
      */
-    public static function instance($className): Mapper
+    public static function instance($modelClassName): Mapper
     {
         // Initialize the service if it's not already set.
-        if (!isset(self::$instances[$className])) {
+        if (!isset(self::$instances[$modelClassName])) {
             $instance = new static();
-            self::$instances[$className] = $instance;
-            $instance->class = $className;
+            self::$instances[$modelClassName] = $instance;
+            $instance->class = $modelClassName;
             $instance->map();
         }
 
         // Return the instance of searched mapper.
-        return self::$instances[$className];
+        return self::$instances[$modelClassName];
     }
 
     /**
@@ -68,7 +73,7 @@ class Mapper
         $prefix = $wpdb->prefix;
 
         if (isset($this->table->prefix)) {
-            $prefix .= $this->table->prefix;
+            $prefix .= $this->table->prefix . '_';
         }
 
         return $prefix;
@@ -112,6 +117,22 @@ class Mapper
     }
 
     /**
+     * @return string
+     */
+    public function getClass(): string
+    {
+        return $this->class;
+    }
+
+    /**
+     * @return string
+     */
+    public function getTableName(): string
+    {
+        return $this->getPrefix() . $this->getTable()->name;
+    }
+
+    /**
      * Returns an instance of the annotation reader (caches within this request).
      *
      * @return AnnotationReader
@@ -132,7 +153,7 @@ class Mapper
      * @return Column|null
      * @throws ReflectionException
      */
-    protected function getPropertyAnnotations(ReflectionClass $reflectionClass, $propertyName): ?Column
+    private function getPropertyAnnotations(ReflectionClass $reflectionClass, $propertyName): ?Column
     {
         $property = $reflectionClass->getProperty($propertyName);
         return $this->getReader()->getPropertyAnnotation($property, Column::class);
@@ -142,142 +163,174 @@ class Mapper
      * Process the class annotations, adding an entry the $this->model, $this->schema, $this->placeholder array.
      *
      * @return void
+     * @throws IncompleteIndexException
      * @throws ReflectionException
      * @throws RepositoryClassNotDefinedException
      * @throws RequiredAnnotationMissingException
      * @throws UnknownColumnTypeException
      */
-    protected function map(): void
+    private function map(): void
     {
-        if (!isset($this->table)) {
-            $reflection_class = new ReflectionClass($this->class);
+        $reflection_class = new ReflectionClass($this->class);
 
-            // Get the annotation reader instance.
-            /** @var Table $classAnnotations */
-            $this->table = $this->getReader()->getClassAnnotation($reflection_class, Table::class);
+        // Get the annotation reader instance.
+        /** @var Table $classAnnotations */
+        $this->table = $this->getReader()->getClassAnnotation($reflection_class, Table::class);
 
-            $this->validateModel($this->table);
+        $this->validateModel($this->table);
 
-            // Loop through the class properties.
-            foreach ($reflection_class->getProperties() as $property) {
-                // Get the annotations of this property.
-                $property_annotations = $this->getPropertyAnnotations($reflection_class, $property->name);
-                $this->columns[$property->name] = $property_annotations;
+        // Loop through the class properties.
+        foreach ($reflection_class->getProperties() as $property) {
+            // Get the annotations of this property.
+            $column = $this->getPropertyAnnotations($reflection_class, $property->name);
+            // Register annotation 
+            $this->columns[$property->name] = $column;
+            // Silently ignore properties that do not have the ORM column type annotation.
+            if (isset($column->type)) {
+                if (isset($column->primary)) {
+                    $this->primaryKeys[] = $property->name;
+                }
 
-                // Silently ignore properties that do not have the ORM column type annotation.
-                if (isset($property_annotations->type)) {
-                    $column_type = strtolower($property_annotations->type);
+                $this->addSchemaString($property, $column);
+                $this->addPlaceholder($property, $column);
+            }
+        }
+            
+        $this->sortSchemas();
+    }
 
-                    // Test the ORM column type
-                    if (!in_array($column_type, [
-                        'datetime',
-                        'timestamp',
-                        'tinyint',
-                        'smallint',
-                        'int',
-                        'bigint',
-                        'varchar',
-                        'tinytext',
-                        'text',
-                        'mediumtext',
-                        'longtext',
-                        'float',
-                        'decimal',
-                    ])
-                    ) {
-                        throw new UnknownColumnTypeException(
-                            sprintf(
-                                __('Unknown model property column type %s set in @ORM column type on model %s..'),
-                                $column_type,
-                                $this->class
-                            )
-                        );
-                    }
+    /**
+     * @param ReflectionProperty $property
+     * @param Column $column
+     * @throws UnknownColumnTypeException
+     */
+    private function addSchemaString(ReflectionProperty $property, Column $column)
+    {
+        $column_type = strtolower($column->type);
 
-                    // Build the rest of the schema partial.
-                    $schema_string = $property->name . ' ' . $column_type;
+        // Test the ORM column type
+        if (!in_array($column_type, [
+            'datetime',
+            'timestamp',
+            'tinyint',
+            'smallint',
+            'int',
+            'bigint',
+            'varchar',
+            'tinytext',
+            'text',
+            'mediumtext',
+            'longtext',
+            'float',
+            'decimal',
+        ])
+        ) {
+            throw new UnknownColumnTypeException($column_type, $this->class);
+        }
 
-                    if (isset($property_annotations->length)) {
-                        $schema_string .= '(' . $property_annotations->length . ')';
-                    }
+        // Build the rest of the schema partial.
+        $schema_string = $property->name . ' ' . $column_type;
 
-                    if (isset($property_annotations->null)) {
-                        $schema_string .= ' ' . $property_annotations->null;
-                    }
+        if (isset($column->length)) {
+            $schema_string .= '(' . $column->length . ')';
+        }
 
-                    // Add the schema to the mapper array for this class.
-                    $placeholder_values_type = '%s';  // Initially assume column is string type.
+        if (isset($column->null)) {
+            $schema_string .= ' ' . $column->null;
+        }
 
-                    if (in_array($column_type, [  // If the column is a decimal type.
-                        'tinyint',
-                        'smallint',
-                        'bigint',
-                    ])) {
-                        $placeholder_values_type = '%d';
-                    }
+        if (isset($column->default)) {
+            $schema_string .= ' DEFAULT' . $column->default;
+        }
 
-                    if (in_array($column_type, [  // If the column is a float type.
-                        'float',
-                    ])) {
-                        $placeholder_values_type = '%f';
-                    }
+        if (isset($column->default)) {
+            $schema_string .= ' DEFAULT' . $column->default;
+        }
 
-                    $this->schemas[$property->name] = $schema_string;
-                    $this->placeholders[$property->name] = $placeholder_values_type;
+        if ((isset($column->primary) && $column->primary) || (isset($column->auto_incremet) && $column->auto_incremet)) {
+            $schema_string .= ' auto_increment';
+        }
+
+        $this->schemas[$property->name] = $schema_string;
+    }
+
+    /**
+     * @param ReflectionProperty $property
+     * @param Column $column
+     */
+    private function addPlaceholder(ReflectionProperty $property, Column $column)
+    {
+        $column_type = strtolower($column->type);
+
+        // Add the schema to the mapper array for this class.
+        $placeholder_values_type = '%s';  // Initially assume column is string type.
+
+        if (in_array($column_type, [  // If the column is a decimal type.
+            'int',
+            'tinyint',
+            'smallint',
+            'bigint',
+        ])) {
+            $placeholder_values_type = '%d';
+        }
+
+        if (in_array($column_type, [  // If the column is a float type.
+            'float',
+            'decimal',
+        ])) {
+            $placeholder_values_type = '%f';
+        }
+
+        $this->placeholders[$property->name] = $placeholder_values_type;
+    }
+
+    /**
+     * @param Table $table
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws IncompleteIndexException
+     */
+    private function validateModel(Table $table)
+    {
+        // Validate type
+        if (!isset($table->type)) {
+            $this->validated = false;
+
+            throw new RequiredAnnotationMissingException('type', $this->class);
+        }
+
+        // Validate table
+        if (!isset($table->name)) {
+            $this->validated = false;
+            throw new RequiredAnnotationMissingException('name', $this->class);
+        }
+
+        // Validate allow_schema_update
+        if (!isset($table->allow_schema_update)) {
+            $this->validated = false;
+            throw new RequiredAnnotationMissingException('allow_schema_update', $this->class);
+        }
+
+        // Validate repository
+        if (isset($table->repository)) {
+            if (!class_exists($table->repository)) {
+                throw new RepositoryClassNotDefinedException($table->repository, $this->class);
+            }
+        }
+
+        // Validate indexes
+        if (isset($table->indexes)) {
+            foreach ($table->indexes as $index) {
+                if (!isset($index->name) || !isset($index->columns)) {
+                    throw new IncompleteIndexException($this->class);
                 }
             }
         }
     }
 
     /**
-     * @param Table $model
-     * @throws RepositoryClassNotDefinedException
-     * @throws RequiredAnnotationMissingException
-     */
-    protected function validateModel(Table $model)
-    {
-        // Validate type
-        if (!isset($model->type)) {
-            $this->table['validated'] = false;
-
-            throw new RequiredAnnotationMissingException(
-                sprintf(__('The annotation type does not exist on the model %s.'), $this->class)
-            );
-        }
-
-        // Validate table
-        if (!isset($model->table)) {
-            $this->table['validated'] = false;
-            throw new RequiredAnnotationMissingException(
-                sprintf(__('The annotation ORM->table does not exist on the model %s.'), $this->class)
-            );
-        }
-
-        // Validate allow_schema_update
-        if (!isset($model->allow_schema_update)) {
-            $this->table['validated'] = false;
-            throw new RequiredAnnotationMissingException(
-                sprintf(__('The annotation ORM_AllowSchemaUpdate does not exist on the model.'), $this->class)
-            );
-        }
-
-        // Validate repository
-        if (isset($model->repository)) {
-            if (!class_exists($model->repository)) {
-                throw new RepositoryClassNotDefinedException(
-                    sprintf(
-                        __('Repository class %s does not exist on model %s.'),
-                        $model->repository,
-                        $this->class
-                    )
-                );
-            }
-        }
-    }
-
-    /**
      * Compares a database table schema to the model schema (as defined in th
-     * annotations). If there any differences, the database schema is modified to
+     * annotations). If there are any differences, the database schema is modified to
      * match the model.
      *
      * @throws AllowSchemaUpdateIsFalseException
@@ -288,51 +341,85 @@ class Mapper
 
         // Are we allowed to update the schema of this model in the db?
         if (!$this->table->allow_schema_update) {
-            throw new AllowSchemaUpdateIsFalseException(
-                sprintf(__('Refused to update model schema %s. ORM_AllowSchemaUpdate is FALSE.'), $this->class)
-            );
+            throw new AllowSchemaUpdateIsFalseException($this->class);
         }
 
-        // Create an ID type string.
-        $id_type = 'ID';
-        $id_type_string = 'id bigint(20) NOT NULL AUTO_INCREMENT';
-
         // Build the SQL CREATE TABLE command for use with dbDelta.
-        $table_name = $this->getPrefix() . $this->table->table;
+        $table_name = $this->getPrefix() . $this->table->name;
 
         $charset_collate = $wpdb->get_charset_collate();
+        
+        $columnsSql = PHP_EOL . implode(", " . PHP_EOL, $this->schemas);
 
-        $sql = "CREATE TABLE " . $table_name . " (
-          " . $id_type_string . ",
-          " . implode(",\n  ", $this->schemas) . ",
-          PRIMARY KEY (" . $id_type . ")
-        ) $charset_collate;";
+        $primaryKeysSql = '';
 
-        echo $sql;
+        if ($this->primaryKeys) {
+            $primaryKeysSql = ', ' . PHP_EOL . 'PRIMARY KEY  (' . implode(',  ', $this->primaryKeys) . ')';
+        }
+
+        $indexesSql = '';
+
+        if (isset($this->table->indexes)) {
+            $indexes = [];
+            foreach ($this->table->indexes as $index) {
+                $indexes[] = ', ' . PHP_EOL . 'INDEX ' . $index->name . ' (' . implode(',', $index->columns) . ')';
+            }
+
+            $indexesSql = implode(', ' . PHP_EOL, $indexes);
+        }
+
+        $sql = "CREATE TABLE " . $table_name . " (" .
+            $columnsSql .
+            $primaryKeysSql .
+            $indexesSql . PHP_EOL .
+            ")" . PHP_EOL . $charset_collate . ';';
+
 
         // Use dbDelta to do all the hard work.
+        // Note that dbDelta doesn't support foreign key's and require specific format of sql query (spaces and new lines)
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
     }
 
     /**
+     * Inherited model properties needs to be sorted in schema
+     */
+    protected function sortSchemas()
+    {
+        if (isset($this->table->column_order)) {
+            $tmp = $this->schemas;
+            $this->schemas = [];
+
+            foreach ($this->table->column_order as $name) {
+                if (isset($tmp[$name])) {
+                    $this->schemas[$name] = $tmp[$name];
+                    unset($tmp[$name]);
+                }
+            }
+            $this->schemas = array_merge($this->schemas, $tmp);
+        }
+    }
+
+    /**
+     * @throws AllowDropIsFalseException
      * @throws AllowSchemaUpdateIsFalseException
      */
     public function dropTable()
     {
         global $wpdb;
-        
+
         // Are we allowed to update the schema of this model in the db?
         if (!$this->table->allow_schema_update) {
-            throw new AllowSchemaUpdateIsFalseException(
-                sprintf(__('Refused to drop table for model %s. ORM_AllowSchemaUpdate is FALSE.'), $this->class)
-            );
+            throw new AllowSchemaUpdateIsFalseException($this->class);
+        }
+
+        // Additional protection before drop
+        if (!$this->table->allow_drop) {
+            throw new AllowDropIsFalseException($this->class);
         }
 
         // Drop the table.
-        $table_name = self::getPrefix() . $this->table->table;
-        $sql = "DROP TABLE IF EXISTS " . $table_name;
+        $sql = "DROP TABLE IF EXISTS " . $this->getPrefix() . $this->table->name;
         $wpdb->query($sql);
     }
-
 }

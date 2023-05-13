@@ -4,6 +4,7 @@ namespace NiceModules\ORM;
 
 use NiceModules\ORM\Collections\TrackedCollection;
 use NiceModules\ORM\Exceptions\FailedToInsertException;
+use NiceModules\ORM\Exceptions\FailedToUpdateException;
 use NiceModules\ORM\Models\BaseModel;
 use NiceModules\ORM\Repositories\BaseRepository;
 
@@ -122,7 +123,7 @@ class Manager
      * This will perform one query per table no matter how many records need to
      * be added.
      *
-     * @throws FailedToInsertException
+     * @throws FailedToUpdateException
      */
     private function _flush_insert()
     {
@@ -165,9 +166,7 @@ class Manager
                     });
                 } // Something went wrong.
                 else {
-                    throw new FailedToInsertException(
-                        __('Failed to insert one or more records into the database.')
-                    );
+                    throw new FailedToInsertException();
                 }
             }
         }
@@ -231,9 +230,7 @@ class Manager
                     });
                 } // Something went wrong.
                 else {
-                    throw new FailedToInsertException(
-                        __('Failed to update one or more records in the database.')
-                    );
+                    throw new FailedToUpdateException();
                 }
             }
         }
@@ -281,7 +278,7 @@ class Manager
      * Apply changes to all models queued up with persist().
      * Attempts to combine queries to reduce MySQL load.
      *
-     * @throws FailedToInsertException
+     * @throws FailedToUpdateException
      */
     public function flush()
     {

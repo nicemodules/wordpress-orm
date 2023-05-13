@@ -15,6 +15,12 @@ use NiceModules\ORM\Annotations\Table;
  */
 class Posts extends IdModel
 {
+
+    /**
+     * @Column(type="bigint", length="20", null="NOT NULL", primary=true)
+     */
+    protected int $ID;
+    
     /**
      * @Column(
      *     type="bigint",
