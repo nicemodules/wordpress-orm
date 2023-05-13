@@ -11,7 +11,7 @@ use Exception;
  */
 class RepositoryClassNotDefinedException extends ErrorArgsException
 {
-    protected static string $error = 'Repository class %s does not exist on model %s.';
+    protected string $error = 'Repository class %s does not exist on model %s.';
 
     /**
      * @param string $repositoryClassName

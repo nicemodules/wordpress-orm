@@ -11,7 +11,7 @@ use Exception;
  */
 class InvalidOperatorException extends ErrorArgsException
 {
-    protected static string $error = 'Operator %s is not valid.';
+    protected string $error = 'Operator %s is not valid.';
 
     /**
      * @param string $operator

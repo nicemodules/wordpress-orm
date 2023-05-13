@@ -12,6 +12,7 @@ use NiceModules\ORM\Models\BaseModel;
  *     name="bar",
  *     allow_schema_update=true,
  *     allow_drop=false,
+ *     repository="NiceModules\ORM\Repositories\Test\BarRepository",
  *     )
  */
 class Bar extends BaseModel
@@ -20,5 +21,5 @@ class Bar extends BaseModel
      * @Column(type="varchar", length="25")
      * @var string
      */
-    protected  string $name;
+    protected string $name = '';
 }

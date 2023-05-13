@@ -11,6 +11,6 @@ use Exception;
  */
 class NoQueryException extends ErrorArgsException
 {
-    protected static string $error = 'No query was built. Run ->buildQuery() first.';
+    protected string $error = 'No query was built. Run ->buildQuery() first.';
     
 }

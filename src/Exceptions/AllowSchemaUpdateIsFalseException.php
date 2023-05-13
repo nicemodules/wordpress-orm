@@ -11,7 +11,7 @@ use Exception;
  */
 class AllowSchemaUpdateIsFalseException extends ErrorArgsException
 {
-    protected static string $error = 'Refused to drop table for model %s. allow_schema_update is FALSE.';
+    protected string $error = 'Refused to drop table for model %s. allow_schema_update is FALSE.';
 
     /**
      * @param string $className

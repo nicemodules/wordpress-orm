@@ -7,17 +7,17 @@ use NiceModules\ORM\QueryBuilder;
 class BaseRepository
 {
 
-    private $classname;
+    private string $classname;
 
     private $annotations;
 
     /**
      * BaseRepository constructor.
      *
-     * @param $classname
+     * @param string $classname
      * @param $annotations
      */
-    public function __construct($classname, $annotations)
+    public function __construct(string $classname, $annotations)
     {
         $this->classname = $classname;
         $this->annotations = $annotations;

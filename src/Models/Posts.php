@@ -4,6 +4,7 @@ namespace NiceModules\ORM\Models;
 
 use NiceModules\ORM\Annotations\Column;
 use NiceModules\ORM\Annotations\Table;
+use NiceModules\ORM\Annotations\ManyToOne;
 
 /**
  * @Table(
@@ -11,7 +12,7 @@ use NiceModules\ORM\Annotations\Table;
  *     name="posts",
  *     allow_schema_update=false,
  *     repository="\NiceModules\ORM\Repositories\PostsRepository"
- * )
+ *     )
  */
 class Posts extends IdModel
 {
@@ -20,15 +21,15 @@ class Posts extends IdModel
      * @Column(type="bigint", length="20", null="NOT NULL", primary=true)
      */
     protected int $ID;
-    
+
     /**
      * @Column(
      *     type="bigint",
      *     length="20",
      *     null="NOT NULL",
-     *     many_to_one=\NiceModules\ORM\Models\Users",
+     *     many_to_one=@ManyToOne(modelName="\NiceModules\ORM\Models\Users", propertyName="ID"),
      *     join_property="ID"
-     * )
+     *     )
      */
     protected $post_author;
 

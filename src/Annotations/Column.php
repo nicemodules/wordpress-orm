@@ -13,6 +13,5 @@ class Column
     public bool $primary;
     public bool $auto_increment;
     public string $default;
-    public string $join_property;
-    public string $many_to_one;
+    public ManyToOne $many_to_one;
 }

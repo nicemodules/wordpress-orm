@@ -8,6 +8,7 @@ use NiceModules\ORM\Annotations\Table;
 use NiceModules\ORM\Exceptions\AllowDropIsFalseException;
 use NiceModules\ORM\Exceptions\AllowSchemaUpdateIsFalseException;
 use NiceModules\ORM\Exceptions\IncompleteIndexException;
+use NiceModules\ORM\Exceptions\IncompleteManyToOneException;
 use NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException;
 use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
 use NiceModules\ORM\Exceptions\UnknownColumnTypeException;
@@ -36,6 +37,7 @@ class Mapper
     private array $schemas = [];
     private array $placeholders = [];
     private array $primaryKeys = [];
+    private array $foreignKeys = [];
     private bool $validated = true;
 
     /**
@@ -133,6 +135,14 @@ class Mapper
     }
 
     /**
+     * @return Column[]
+     */
+    public function getColumns(): array
+    {
+        return $this->columns;
+    }
+
+    /**
      * Returns an instance of the annotation reader (caches within this request).
      *
      * @return AnnotationReader
@@ -203,6 +213,7 @@ class Mapper
      * @param ReflectionProperty $property
      * @param Column $column
      * @throws UnknownColumnTypeException
+     * @throws IncompleteManyToOneException
      */
     private function addSchemaString(ReflectionProperty $property, Column $column)
     {
@@ -242,15 +253,19 @@ class Mapper
         if (isset($column->default)) {
             $schema_string .= ' DEFAULT' . $column->default;
         }
-
-        if (isset($column->default)) {
-            $schema_string .= ' DEFAULT' . $column->default;
-        }
-
+        
         if ((isset($column->primary) && $column->primary) || (isset($column->auto_incremet) && $column->auto_incremet)) {
             $schema_string .= ' auto_increment';
         }
 
+        if (isset($column->many_to_one)) {
+            if(!isset($column->many_to_one->modelName) || !isset($column->many_to_one->propertyName)){
+                throw new IncompleteManyToOneException($this->class, $property->name);
+            }
+            
+            $this->foreignKeys[$property->name] = $column->many_to_one;
+        }
+        
         $this->schemas[$property->name] = $schema_string;
     }
 

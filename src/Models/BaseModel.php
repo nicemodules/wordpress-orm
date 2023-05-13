@@ -20,12 +20,9 @@ abstract class BaseModel
     /**
      * @Column(type="int", length="10", null="NOT NULL", primary=true)
      */
-    protected int $ID;
+    protected ?int $ID;
 
-    /**
-     * @var
-     */
-    protected $hash;
+    protected string $hash;
 
     /**
      * BaseModel constructor.
@@ -40,30 +37,28 @@ abstract class BaseModel
      */
     public function __clone()
     {
-        $class_name = get_class($this);
+        $class_name = get_called_class();
         $object = new $class_name;
 
-        $schema = Mapper::instance($class_name)->getSchemas();
+        $columns = Mapper::instance($class_name)->getColumns();
 
-        foreach (array_keys($schema) as $property) {
+        foreach (array_keys($columns) as $property) {
             $object->set($property, $this->get($property));
         }
     }
 
     /**
-     * Getter.
-     *
-     * @return string
+     * @return int|null
      */
-    public function getId()
+    public function getId(): ?int
     {
-        return $this->ID;
+        if (isset($this->ID)) {
+            return $this->ID;
+        }
+        return null;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getHash()
+    public function getHash(): string
     {
         return $this->hash;
     }
@@ -75,9 +70,21 @@ abstract class BaseModel
      * @throws UnknownColumnTypeException
      * @throws ReflectionException
      */
-    public function getTableName()
+    public function getTableName(): string
     {
-        return Mapper::instance(self::class)->getTable()->table;
+        return Mapper::instance(get_called_class())->getTableName();
+    }
+
+    /**
+     * @return Column[]
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
+     */
+    public function getColumns(): array
+    {
+        return Mapper::instance(get_called_class())->getColumns();
     }
 
     /**
@@ -87,27 +94,24 @@ abstract class BaseModel
      * @throws RequiredAnnotationMissingException
      * @throws UnknownColumnTypeException
      */
-    public function getSchema()
-    {
-        return Mapper::instance(self::class)->getSchemas();
-    }
-
-    /**
-     * @return mixed
-     */
     public function getPlaceholders()
     {
-        return Mapper::instance(self::class)->getPlaceholders();
+        return Mapper::instance(get_called_class())->getPlaceholders();
     }
 
     /**
      * Return keyed values from this object as per the schema (no ID).
      * @return array
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
      */
-    public function getAllValues()
+    public function getAllValues(): array
     {
         $values = [];
-        foreach (array_keys($this->getSchema()) as $property) {
+        foreach (array_keys($this->getColumns()) as $property) {
             $values[$property] = $this->get($property);
         }
         return $values;
@@ -122,11 +126,11 @@ abstract class BaseModel
      * @throws RequiredAnnotationMissingException
      * @throws UnknownColumnTypeException
      */
-    public function getAllUnkeyedValues()
+    public function getAllUnkeyedValues(): array
     {
         return array_map(function ($key) {
             return $this->get($key);
-        }, array_keys($this->getSchema()));
+        }, array_keys($this->getColumns()));
     }
 
     /**
@@ -136,11 +140,13 @@ abstract class BaseModel
      * @param $property
      *
      * @return mixed
-     * @throws PropertyDoesNotExistException
      */
-    final public function getDBValue($property)
+    final public function getRaw($property)
     {
-        return $this->get($property);
+        if (isset($this->$property)) {
+            return $this->$property;
+        }
+        return null;
     }
 
     /**
@@ -150,27 +156,27 @@ abstract class BaseModel
      *
      * @return mixed
      * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
      */
-    final public function get(string $property): mixed
+    final public function get(string $property)
     {
         // Check to see if the property exists on the model.
         if (!property_exists($this, $property)) {
-            throw new PropertyDoesNotExistException($property, self::class);
+            throw new PropertyDoesNotExistException($property, get_called_class());
         }
 
         // If this property is a ManyToOne, check to see if it's an object and lazy
         // load it if not.
-        $many_to_one_class = Mapper::instance(self::class)->getColumn($property)->many_to_one;
+        $column = Mapper::instance(get_called_class())->getColumn($property);
 
-        /** @var string $many_to_one_property */
-        $many_to_one_property = Mapper::instance(self::class)->getColumn($property)->join_property;
-
-        if ($many_to_one_class && $many_to_one_property && !is_object($this->$property)) {
+        if (isset($column->many_to_one) && isset($this->$property) && !is_object($this->$property)) {
             // Lazy load.
             $orm = Manager::getManager();
-            $object_repository = $orm->getRepository($many_to_one_class);
-
-            $object = $object_repository->findBy([$many_to_one_property => $this->$property]);
+            $object_repository = $orm->getRepository($column->many_to_one->modelName);
+            $object = $object_repository->findBy([$column->many_to_one->propertyName => $this->$property]);
 
             if ($object) {
                 $this->$property = $object;
@@ -178,7 +184,11 @@ abstract class BaseModel
         }
 
         // Return the value of the field.
-        return $this->$property;
+        if (isset($this->$property)) {
+            return $this->$property;
+        }
+
+        return null;
     }
 
     /**
@@ -186,8 +196,13 @@ abstract class BaseModel
      *
      * @param $columns
      * @return array
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
      */
-    final public function getMultiple($columns)
+    final public function getMultiple($columns): array
     {
         $results = [];
 
@@ -213,7 +228,7 @@ abstract class BaseModel
     {
         // Check to see if the property exists on the model.
         if (!property_exists($this, $column)) {
-            throw new PropertyDoesNotExistException($column, self::class);
+            throw new PropertyDoesNotExistException($column, get_called_class());
         }
 
         // Update the model with the value.

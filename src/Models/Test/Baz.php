@@ -19,7 +19,7 @@ class Baz extends BaseModel
      * @Column(type="varchar", length="25")
      * @var string
      */
-    protected  string $name;
+    protected string $name = '';
 }
 
 

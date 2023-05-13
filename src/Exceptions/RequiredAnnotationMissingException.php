@@ -11,7 +11,7 @@ use Exception;
  */
 class RequiredAnnotationMissingException extends ErrorArgsException
 {
-    protected static string $error = 'The annotation %s does not exist on the model %s.';
+    protected string $error = 'The annotation %s does not exist on the model %s.';
 
     /**
      * @param string $modelClassName

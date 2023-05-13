@@ -6,7 +6,7 @@ use Exception;
 
 class IncompleteIndexException extends ErrorArgsException
 {
-     protected static string $error = 'Indexes of model %s are incomplete.';
+     protected string $error = 'Indexes of model %s are incomplete.';
 
     /**
      * @param string $className

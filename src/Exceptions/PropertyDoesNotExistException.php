@@ -11,7 +11,7 @@ use Exception;
  */
 class PropertyDoesNotExistException extends ErrorArgsException
 {
-    protected static string $error = 'Property %s does not exist in model %s.';
+    protected string $error = 'Property %s does not exist in model %s.';
 
     /**
      * @param string $propertyName

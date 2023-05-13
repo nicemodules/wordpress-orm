@@ -11,5 +11,5 @@ use Exception;
  */
 class FailedToUpdateException extends ErrorArgsException
 {
-    protected static string $error = 'Failed to update one or more records in the database.';
+    protected string $error = 'Failed to update one or more records in the database.';
 }

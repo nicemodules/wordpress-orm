@@ -51,6 +51,12 @@ class MapperTest extends TestCase
         $column = $mapper->getColumn('foo');
         $this->assertNull($column);
     }
+    
+    public function testGetColums(){
+        $mapper = Mapper::instance(Foo::class);
+        $array = $mapper->getColumns();
+        $this->assertNotEmpty($array);
+    }
 
     public function testGetClass()
     {
@@ -70,9 +76,8 @@ class MapperTest extends TestCase
     public function testGetSchemas()
     {
         $mapper = Mapper::instance(Foo::class);
-        $table = $mapper->getSchemas();
-       
-        $this->assertNotEmpty($table);
+        $array = $mapper->getSchemas();
+        $this->assertNotEmpty($array);
     }
 
     public function testUpdateSchema()
@@ -97,7 +102,7 @@ class MapperTest extends TestCase
             $mapper->updateSchema();
         } catch (AllowSchemaUpdateIsFalseException $e) {
             $this->assertInstanceOf(AllowSchemaUpdateIsFalseException::class, $e);
-            $this->assertEquals(AllowSchemaUpdateIsFalseException::getErrorMessage(Baz::class), $e->getMessage());
+            $this->assertEquals($e->getErrorMessage(Baz::class), $e->getMessage());
             return;
         }
 
@@ -121,7 +126,7 @@ class MapperTest extends TestCase
             $mapper->dropTable();
         } catch (AllowDropIsFalseException $e) {
             $this->assertInstanceOf(AllowDropIsFalseException::class, $e);
-            $this->assertEquals(AllowDropIsFalseException::getErrorMessage(Bar::class), $e->getMessage());
+            $this->assertEquals($e->getErrorMessage(Bar::class), $e->getMessage());
             return;
         }
         
