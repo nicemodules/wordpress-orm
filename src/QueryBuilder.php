@@ -17,10 +17,10 @@ class QueryBuilder
     private $limit;
 
     /**
-     * The prepared query run through $wpdb->prepare().
-     * @var
+     * The query result.
+     * @var array
      */
-    private $query;
+    private array $result;
 
     /**
      * Reference to the repository.
@@ -148,12 +148,9 @@ class QueryBuilder
      */
     public function buildQuery()
     {
-        global $wpdb;
-
         $values = [];
 
-        $sql = "SELECT * FROM " . Mapper::instance($this->repository->getObjectClass())->getPrefix(
-            ) . $this->repository->getDBTable() . " ";
+        $sql = "SELECT * FROM " . Mapper::instance($this->repository->getObjectClass())->getTableName() . " ";
 
         // Combine the WHERE clauses and add to the SQL statement.
         if (count($this->where)) {
@@ -202,10 +199,26 @@ class QueryBuilder
         }
 
         // Save it.
-        $this->query = $wpdb->prepare($sql, $values);
+        print_r(PHP_EOL.'___VALUES:'.PHP_EOL);
+        print_r($values);
+        print_r(PHP_EOL);
+        
+        $this->result = Manager::instance()->getAdapter()->fetch($sql, $values);
+        
+        print_r(PHP_EOL.'___:'.PHP_EOL);
+        print_r( $this->result);
+        print_r(PHP_EOL);
+        die();
+        
         return $this;
     }
-
+    
+    
+    public function getRawResult(): array
+    {
+        return $this->result;
+    }
+    
     /**
      * Run the query returning either a single object or an array of objects.
      *
@@ -216,9 +229,7 @@ class QueryBuilder
      */
     public function getResults($always_array = false)
     {
-        global $wpdb;
-
-        if ($this->query) {
+        if ($this->result) {
             // Classname for this repository.
             $object_classname = $this->repository->getObjectClass();
 
@@ -233,12 +244,12 @@ class QueryBuilder
                 });
 
                 // Track the object.
-                $em = Manager::getManager();
+                $em = Manager::instance();
                 $em->track($object);
 
                 // Save it.
                 return $object;
-            }, $wpdb->get_results($this->query));
+            }, $this->result);
 
             // There were no results.
             if (!count($objects)) {

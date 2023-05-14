@@ -3,50 +3,51 @@
 namespace NiceModules\ORM;
 
 use NiceModules\ORM\Collections\TrackedCollection;
+use NiceModules\ORM\DatabaseAdapters\DatabaseAdapter;
+use NiceModules\ORM\DatabaseAdapters\PDOAdapter;
+use NiceModules\ORM\DatabaseAdapters\WpDbAdapter;
 use NiceModules\ORM\Exceptions\FailedToInsertException;
 use NiceModules\ORM\Exceptions\FailedToUpdateException;
 use NiceModules\ORM\Models\BaseModel;
 use NiceModules\ORM\Repositories\BaseRepository;
+use ReflectionException;
 
-class Manager
+use const NiceModules\ORM_ADAPTER;
+
+class Manager extends Singleton
 {
-
-    /**
-     * @var Manager
-     */
-    private static $manager_service = null;
-
     /**
      * Holds an array of objects the manager knows exist in the database (either
      * from a query or a previous persist() call).
      *
      * @var TrackedCollection
      */
-    private $tracked;
+    private TrackedCollection $tracked;
+    private DatabaseAdapter $adapter;
 
-    /**
-     * Initializes a non static copy of itself when called. Subsequent calls
-     * return the same object (fake dependency injection/service).
-     *
-     * @return Manager
-     */
-    public static function getManager()
-    {
-        // Initialize the service if it's not already set.
-        if (self::$manager_service === null) {
-            self::$manager_service = new Manager();
-        }
-
-        // Return the instance.
-        return self::$manager_service;
-    }
 
     /**
      * Manager constructor.
+     * TODO: use of pdo adapter 
      */
-    public function __construct()
+    protected function __construct()
     {
         $this->tracked = new TrackedCollection;
+
+        $this->adapter = new WpDbAdapter();
+        
+//        switch (ORM_ADAPTER) {
+//            case WpDbAdapter::NAME:
+//                {
+//                    $this->adapter = new WpDbAdapter();
+//                }
+//                break;
+//            case PDOAdapter::NAME:
+//                {
+//                    $this->adapter = new PDOAdapter();
+//                }
+//                break;
+//        }
     }
 
     /**
@@ -58,7 +59,7 @@ class Manager
      * @throws Exceptions\RepositoryClassNotDefinedException
      * @throws Exceptions\RequiredAnnotationMissingException
      * @throws Exceptions\UnknownColumnTypeException
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     public function getRepository($classname)
     {
@@ -77,7 +78,7 @@ class Manager
     /**
      * Queue this model up to be added to the database with flush().
      *
-     * @param $object
+     * @param BaseModel $object
      */
     public function persist(BaseModel $object)
     {
@@ -119,16 +120,26 @@ class Manager
     }
 
     /**
+     * @return DatabaseAdapter
+     */
+    public function getAdapter(): DatabaseAdapter
+    {
+        return $this->adapter;
+    }
+
+    /**
      * Add new objects to the database.
      * This will perform one query per table no matter how many records need to
      * be added.
      *
-     * @throws FailedToUpdateException
+     * @throws Exceptions\RepositoryClassNotDefinedException
+     * @throws Exceptions\RequiredAnnotationMissingException
+     * @throws Exceptions\UnknownColumnTypeException
+     * @throws FailedToInsertException
+     * @throws ReflectionException
      */
     private function _flush_insert()
     {
-        global $wpdb;
-
         // Get a list of tables and columns that have data to insert.
         $insert = $this->tracked->getInsertUpdateTableData('getPersistedObjects');
 
@@ -136,7 +147,7 @@ class Manager
         if (count($insert)) {
             // Build the combined query for table: $tablename
             foreach ($insert as $classname => $values) {
-                $table_name = Mapper::instance($classname)->getPrefix() . $values['table_name'];
+                $table_name = $values['table_name'];
 
                 // Build the placeholder SQL query.
                 $sql = "INSERT INTO " . $table_name . "
@@ -149,15 +160,14 @@ class Manager
 
                     if ($values['placeholders_count'] > 1) {
                         $sql .= ",
-            ";
+                        ";
                     }
 
                     $values['placeholders_count'] -= 1;
                 }
 
                 // Insert using Wordpress prepare() which provides SQL injection protection (apparently).
-                $prepared = $wpdb->prepare($sql, $values['values']);
-                $count = $wpdb->query($prepared);
+                $count = $this->getAdapter()->execute($sql, $values['values']);
 
                 // Start tracking all the added objects.
                 if ($count) {
@@ -191,7 +201,7 @@ class Manager
         if (count($update)) {
             // Build the combined query for table: $tablename
             foreach ($update as $classname => $values) {
-                $table_name = Mapper::instance($classname)->getPrefix() . $values['table_name'];
+                $table_name = $values['table_name'];
 
                 $sql = "INSERT INTO " . $table_name . " (ID, " . implode(", ", $values['columns']) . ")
           VALUES

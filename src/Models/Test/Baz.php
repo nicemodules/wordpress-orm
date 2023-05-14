@@ -11,6 +11,7 @@ use NiceModules\ORM\Models\BaseModel;
  *     type="Entity",
  *     name="bar",
  *     allow_schema_update=false,
+ *     inherits="NiceModules\ORM\Models\BaseModel"
  *     )
  */
 class Baz extends BaseModel

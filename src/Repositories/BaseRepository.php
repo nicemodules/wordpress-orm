@@ -2,40 +2,50 @@
 
 namespace NiceModules\ORM\Repositories;
 
+use NiceModules\ORM\Annotations\Table;
+use NiceModules\ORM\Exceptions\InvalidOperatorException;
+use NiceModules\ORM\Exceptions\NoQueryException;
+use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
+use NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException;
+use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
+use NiceModules\ORM\Exceptions\UnknownColumnTypeException;
+use NiceModules\ORM\Mapper;
 use NiceModules\ORM\QueryBuilder;
+use ReflectionException;
 
 class BaseRepository
 {
 
     private string $classname;
 
-    private $annotations;
+    private Mapper $mapper;
 
     /**
      * BaseRepository constructor.
      *
      * @param string $classname
-     * @param $annotations
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
+     * @throws ReflectionException
      */
-    public function __construct(string $classname, $annotations)
+    public function __construct(string $classname)
     {
         $this->classname = $classname;
-        $this->annotations = $annotations;
+        $this->mapper = Mapper::instance($classname);
     }
 
     /**
-     * @param $classname
-     * @param $annotations
-     *
+     * @param string $classname
      * @return BaseRepository
      */
-    public static function getInstance($classname, $annotations)
+    public static function getInstance(string $classname)
     {
         // Get the class (as this could be a child of BaseRepository)
         $this_repository_class = get_called_class();
 
         // Return a new instance of the class.
-        return new $this_repository_class($classname, $annotations);
+        return new $this_repository_class($classname);
     }
 
     /**
@@ -61,7 +71,7 @@ class BaseRepository
      */
     public function getDBTable()
     {
-        return $this->annotations['ORM_Table'];
+        return $this->mapper->getTableName();
     }
 
     /**
@@ -70,10 +80,7 @@ class BaseRepository
      */
     public function getObjectProperties()
     {
-        return array_merge(
-            ['ID'],
-            array_keys($this->annotations['schema'])
-        );
+        return $this->mapper->getColumns();
     }
 
     /**
@@ -82,10 +89,7 @@ class BaseRepository
      */
     public function getObjectPropertyPlaceholders()
     {
-        return array_merge(
-            ['ID' => '%d'],
-            $this->annotations['placeholder']
-        );
+        return  $this->mapper->getPlaceholders();
     }
 
     /**
@@ -123,6 +127,13 @@ class BaseRepository
      * @param array $criteria
      *
      * @return array
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
+     * @throws InvalidOperatorException
+     * @throws NoQueryException
+     * @throws PropertyDoesNotExistException
      */
     public function findBy(array $criteria)
     {

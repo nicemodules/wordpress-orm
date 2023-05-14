@@ -2,15 +2,10 @@
 
 namespace NiceModules\Tests\ORM\Models;
 
-use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
-use NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException;
-use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
-use NiceModules\ORM\Exceptions\UnknownColumnTypeException;
 use NiceModules\ORM\Mapper;
 use NiceModules\ORM\Models\BaseModel;
 use NiceModules\ORM\Models\Test\Foo;
 use PHPUnit\Framework\TestCase;
-use ReflectionException;
 
 class BaseModelTest extends TestCase
 {
@@ -67,6 +62,9 @@ class BaseModelTest extends TestCase
     public function testGetPlaceholders()
     {
         $foo = new Foo();
+        
+        $foo->set('ID', 100);
+        
         $this->assertEquals(Mapper::instance(Foo::class)->getPlaceholders(), $foo->getPlaceholders());
     }
 

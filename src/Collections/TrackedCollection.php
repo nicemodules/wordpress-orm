@@ -3,6 +3,7 @@
 namespace NiceModules\ORM\Collections;
 
 use ArrayAccess;
+use NiceModules\ORM\Models\BaseModel;
 
 define('_OBJECT_NEW', 1);
 define('_OBJECT_TRACKED', 2);
@@ -44,38 +45,42 @@ class TrackedCollection implements ArrayAccess
 
         // Get the structural data.
         foreach ($this->$iterator() as $item) {
+            /** @var BaseModel $model */
+            $model = $item['model'];
+            $modelClass = get_class($model);
+            
             // Add the table name and schema data (only once).
-            if (!isset($data[get_class($item['model'])])) {
-                $data[get_class($item['model'])] = [
+            if (!isset($data[$modelClass])) {
+                $data[$modelClass] = [
                     'objects' => [],
-                    'table_name' => $item['model']->getTableName(),
-                    'columns' => array_keys($item['model']->getSchema()),
-                    'placeholders' => $item['model']->getPlaceholders(),
+                    'table_name' => $model->getTableName(),
+                    'columns' => $model->getColumnNames(),
+                    'placeholders' => $model->getPlaceholders(),
                     'placeholders_count' => 0,
                     'values' => [],
                 ];
             }
 
             // Store the object.
-            $data[get_class($item['model'])]['objects'][] = $item['model'];
+            $data[$modelClass]['objects'][] = $model;
 
             // Now add the placeholder and row data.
-            $data[get_class($item['model'])]['placeholders_count'] += 1;
+            $data[$modelClass]['placeholders_count'] += 1;
 
             if ($iterator === 'getPersistedObjects') {
-                $data[get_class($item['model'])]['values'] = array_merge(
-                    $data[get_class($item['model'])]['values'],
-                    $item['model']->getAllUnkeyedValues()
+                $data[$modelClass]['values'] = array_merge(
+                    $data[$modelClass]['values'],
+                    $model->getAllUnkeyedValues()
                 );
             } else {
-                $data[get_class($item['model'])]['values'] = array_merge(
-                    $data[get_class($item['model'])]['values'],
-                    [$item['model']->getID()],
-                    $item['model']->getAllUnkeyedValues()
+                $data[$modelClass]['values'] = array_merge(
+                    $data[$modelClass]['values'],
+                    [$model->getId()],
+                    $model->getAllUnkeyedValues()
                 );
             }
         }
-
+        
         return $data;
     }
 

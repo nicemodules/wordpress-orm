@@ -43,7 +43,10 @@ abstract class BaseModel
         $columns = Mapper::instance($class_name)->getColumns();
 
         foreach (array_keys($columns) as $property) {
-            $object->set($property, $this->get($property));
+            if($property == 'ID'){
+                continue;
+            }
+            $object->set($property, $this->getRaw($property));
         }
     }
 
@@ -55,7 +58,15 @@ abstract class BaseModel
         if (isset($this->ID)) {
             return $this->ID;
         }
+        
         return null;
+    }
+    
+    public function hasId(){
+        if(!isset($this->ID) || (isset($this->ID) && empty($this->ID))){
+            return false;
+        }
+        return true;
     }
 
     public function getHash(): string
@@ -84,7 +95,25 @@ abstract class BaseModel
      */
     public function getColumns(): array
     {
-        return Mapper::instance(get_called_class())->getColumns();
+        $columns = Mapper::instance(get_called_class())->getColumns();
+        
+        if(!$this->hasId()){
+            unset($columns['ID']);
+        }
+        
+        return $columns;
+    }
+
+    /**
+     * @return array
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
+     */
+    public function getColumnNames(): array
+    {
+        return array_keys($this->getColumns());
     }
 
     /**
@@ -96,11 +125,17 @@ abstract class BaseModel
      */
     public function getPlaceholders()
     {
-        return Mapper::instance(get_called_class())->getPlaceholders();
+        $placeholders = Mapper::instance(get_called_class())->getPlaceholders();
+
+        if(!$this->hasId()){
+            unset($placeholders['ID']);
+        }
+        
+        return $placeholders;
     }
 
     /**
-     * Return keyed values from this object as per the schema (no ID).
+     * Return keyed values from this object as per the schema.
      * @return array
      * @throws PropertyDoesNotExistException
      * @throws ReflectionException
@@ -146,6 +181,7 @@ abstract class BaseModel
         if (isset($this->$property)) {
             return $this->$property;
         }
+        
         return null;
     }
 

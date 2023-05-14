@@ -143,6 +143,22 @@ class Mapper
     }
 
     /**
+     * @return array
+     */
+    public function getPrimaryKeys(): array
+    {
+        return $this->primaryKeys;
+    }
+
+    /**
+     * @return array
+     */
+    public function getForeignKeys(): array
+    {
+        return $this->foreignKeys;
+    }
+
+    /**
      * Returns an instance of the annotation reader (caches within this request).
      *
      * @return AnnotationReader
@@ -193,10 +209,12 @@ class Mapper
         foreach ($reflection_class->getProperties() as $property) {
             // Get the annotations of this property.
             $column = $this->getPropertyAnnotations($reflection_class, $property->name);
-            // Register annotation 
-            $this->columns[$property->name] = $column;
+            
             // Silently ignore properties that do not have the ORM column type annotation.
             if (isset($column->type)) {
+                // Register annotation 
+                $this->columns[$property->name] = $column;
+                
                 if (isset($column->primary)) {
                     $this->primaryKeys[] = $property->name;
                 }
@@ -205,8 +223,10 @@ class Mapper
                 $this->addPlaceholder($property, $column);
             }
         }
-            
-        $this->sortSchemas();
+        
+        $this->sort($this->schemas);
+        $this->sort($this->columns);
+        $this->sort($this->placeholders);
     }
 
     /**
@@ -352,66 +372,25 @@ class Mapper
      */
     public function updateSchema()
     {
-        global $wpdb;
-
-        // Are we allowed to update the schema of this model in the db?
-        if (!$this->table->allow_schema_update) {
-            throw new AllowSchemaUpdateIsFalseException($this->class);
-        }
-
-        // Build the SQL CREATE TABLE command for use with dbDelta.
-        $table_name = $this->getPrefix() . $this->table->name;
-
-        $charset_collate = $wpdb->get_charset_collate();
-        
-        $columnsSql = PHP_EOL . implode(", " . PHP_EOL, $this->schemas);
-
-        $primaryKeysSql = '';
-
-        if ($this->primaryKeys) {
-            $primaryKeysSql = ', ' . PHP_EOL . 'PRIMARY KEY  (' . implode(',  ', $this->primaryKeys) . ')';
-        }
-
-        $indexesSql = '';
-
-        if (isset($this->table->indexes)) {
-            $indexes = [];
-            foreach ($this->table->indexes as $index) {
-                $indexes[] = ', ' . PHP_EOL . 'INDEX ' . $index->name . ' (' . implode(',', $index->columns) . ')';
-            }
-
-            $indexesSql = implode(', ' . PHP_EOL, $indexes);
-        }
-
-        $sql = "CREATE TABLE " . $table_name . " (" .
-            $columnsSql .
-            $primaryKeysSql .
-            $indexesSql . PHP_EOL .
-            ")" . PHP_EOL . $charset_collate . ';';
-
-
-        // Use dbDelta to do all the hard work.
-        // Note that dbDelta doesn't support foreign key's and require specific format of sql query (spaces and new lines)
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        Manager::instance()->getAdapter()->updateSchema($this);  
     }
 
     /**
      * Inherited model properties needs to be sorted in schema
      */
-    protected function sortSchemas()
+    protected function sort(&$array)
     {
         if (isset($this->table->column_order)) {
-            $tmp = $this->schemas;
-            $this->schemas = [];
+            $tmp = $array;
+            $array = [];
 
             foreach ($this->table->column_order as $name) {
                 if (isset($tmp[$name])) {
-                    $this->schemas[$name] = $tmp[$name];
+                    $array[$name] = $tmp[$name];
                     unset($tmp[$name]);
                 }
             }
-            $this->schemas = array_merge($this->schemas, $tmp);
+            $array = array_merge($array, $tmp);
         }
     }
 
