@@ -12,15 +12,18 @@ class PDOAdapter implements DatabaseAdapter
     private PDO $pdo;
 
     /**
-     * TODO: figure out podo database configuration 
+     * 
      */
     public function connect()
     {
-        $dsn = 'mysql:host=localhost;dbname=my_database';
-        $username = 'root';
-        $password = '';
+        /*  * *************** CONFIGURATION DB *************** */
+        $dbServer = WORDPRESS_DB_SERVER;
+        $dbName = WORDPRESS_DB_USER;
+        $dbUser = WORDPRESS_DB_PASS;
+        $dbPassword = WORDPRESS_DB_NAME;
+        /*  * **************** END OF CONFIGURATION *********** */
 
-        $this->pdo = new PDO($dsn, $username, $password);
+        $this->pdo = new mPDO('mysql:host=' . $dbServer . ';dbname=' . $dbName, $dbUser, $dbPassword);
     }
 
     public function disconnect()
@@ -34,16 +37,9 @@ class PDOAdapter implements DatabaseAdapter
         $stmt->execute($values);
         return $stmt->rowCount();
     }
+    
 
-    public function executeTransaction(array $queries)
-    {
-        array_push($queries, 'START TRANSACTION;');
-        array_unshift($queries, 'COMMIT;');
-
-        return $this->execute(implode(PHP_EOL, $queries));
-    }
-
-    public function fetch($query, array $values = [])
+    public function fetch(string $query, array $values = [])
     {
         $stmt = $this->pdo->prepare($query);
         $stmt->execute($values);

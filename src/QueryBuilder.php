@@ -197,18 +197,8 @@ class QueryBuilder
         if ($this->limit) {
             $sql .= $this->limit;
         }
-
-        // Save it.
-        print_r(PHP_EOL.'___VALUES:'.PHP_EOL);
-        print_r($values);
-        print_r(PHP_EOL);
         
         $this->result = Manager::instance()->getAdapter()->fetch($sql, $values);
-        
-        print_r(PHP_EOL.'___:'.PHP_EOL);
-        print_r( $this->result);
-        print_r(PHP_EOL);
-        die();
         
         return $this;
     }

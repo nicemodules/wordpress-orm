@@ -23,31 +23,26 @@ class ManagerTest extends TestCase
         $repo = Manager::instance()->getRepository(Foo::class);
         $this->assertInstanceOf(FooRepository::class, $repo);
     }
-    
+
     public function testPersist()
     {
         Mapper::instance(Bar::class)->updateSchema();
-        
-        $bar = new Bar();
-        $bar->set('name', 'Foo');
 
+        $unique = uniqid('u', true);
 
-        $bar2 = new Bar();
-        $bar2->set('name', 'Bar');
-        
-        Manager::instance()->persist($bar);
-        Manager::instance()->persist($bar2);
+        $bars = [];
+        for ($i = 0; $i < 10; $i++) {
+            $bar = new Bar();
+            $bar->set('name', $unique . '-' . $i);
+
+            $bars[] = $bar;
+            
+            Manager::instance()->persist($bar);
+        }
+
         Manager::instance()->flush();
-        
 
-        $results = Manager::instance()
-            ->getRepository(Bar::class)
-            ->findAll();
-        
-        print_r(PHP_EOL.'___:'.PHP_EOL);
-        print_r($results);
-        print_r(PHP_EOL); 
-        
+        $bars = Manager::instance()->getRepository(Bar::class);
     }
 
     public function testRemove()
@@ -61,9 +56,8 @@ class ManagerTest extends TestCase
     public function testClean()
     {
     }
-    
+
     public function testFlush()
     {
-
     }
 }

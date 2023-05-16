@@ -19,7 +19,7 @@ use NiceModules\ORM\Models\BaseModel;
 class Bar extends BaseModel
 {
     /**
-     * @Column(type="varchar", length="25")
+     * @Column(type="varchar", length="100")
      * @var string
      */
     protected string $name = '';

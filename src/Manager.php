@@ -4,15 +4,14 @@ namespace NiceModules\ORM;
 
 use NiceModules\ORM\Collections\TrackedCollection;
 use NiceModules\ORM\DatabaseAdapters\DatabaseAdapter;
-use NiceModules\ORM\DatabaseAdapters\PDOAdapter;
 use NiceModules\ORM\DatabaseAdapters\WpDbAdapter;
+use NiceModules\ORM\Exceptions\FailedToDeleteException;
 use NiceModules\ORM\Exceptions\FailedToInsertException;
 use NiceModules\ORM\Exceptions\FailedToUpdateException;
 use NiceModules\ORM\Models\BaseModel;
 use NiceModules\ORM\Repositories\BaseRepository;
 use ReflectionException;
-
-use const NiceModules\ORM_ADAPTER;
+use Throwable;
 
 class Manager extends Singleton
 {
@@ -28,14 +27,14 @@ class Manager extends Singleton
 
     /**
      * Manager constructor.
-     * TODO: use of pdo adapter 
+     * TODO: pdo adapter
      */
     protected function __construct()
     {
         $this->tracked = new TrackedCollection;
 
         $this->adapter = new WpDbAdapter();
-        
+
 //        switch (ORM_ADAPTER) {
 //            case WpDbAdapter::NAME:
 //                {
@@ -148,35 +147,53 @@ class Manager extends Singleton
             // Build the combined query for table: $tablename
             foreach ($insert as $classname => $values) {
                 $table_name = $values['table_name'];
+                $sql = '';
 
-                // Build the placeholder SQL query.
-                $sql = "INSERT INTO " . $table_name . "
-                  (" . implode(", ", $values['columns']) . ")
-              VALUES
-              ";
+                try {
+                    $this->getAdapter()->execute('START TRANSACTION;');
+                    // Build the placeholder SQL query.
 
-                while ($values['placeholders_count'] > 0) {
-                    $sql .= "(" . implode(", ", $values['placeholders']) . ")";
+                    $sql .= "INSERT INTO " . $table_name . "
+                        (" . implode(", ", $values['columns']) . ")
+                        VALUES
+                         ";
 
-                    if ($values['placeholders_count'] > 1) {
-                        $sql .= ",
-                        ";
+                    while ($values['placeholders_count'] > 0) {
+                        $sql .= "(" . implode(", ", $values['placeholders']) . ")";
+
+                        if ($values['placeholders_count'] > 1) {
+                            $sql .= ",
+                            ";
+                        }
+
+                        $values['placeholders_count'] -= 1;
                     }
 
-                    $values['placeholders_count'] -= 1;
-                }
+                    $sql .= ';' . PHP_EOL;
 
-                // Insert using Wordpress prepare() which provides SQL injection protection (apparently).
-                $count = $this->getAdapter()->execute($sql, $values['values']);
+                    // Insert using Wordpress prepare() which provides SQL injection protection (apparently).
+                    $count = $this->getAdapter()->execute($sql, $values['values']);
 
-                // Start tracking all the added objects.
-                if ($count) {
-                    array_walk($values['objects'], function ($object) {
-                        $this->track($object);
-                    });
-                } // Something went wrong.
-                else {
-                    throw new FailedToInsertException();
+                    // Get last inserted id && row count 
+                    $result = $this->getAdapter()->fetchRow('SELECT LAST_INSERT_ID() as id, ROW_COUNT() as rows;');
+
+                    // Start tracking all the added objects.
+                    if ($count && $count == $result->rows && $count == count($values['objects'])) {
+                        $this->getAdapter()->execute('COMMIT;');
+
+                        foreach ($values['objects'] as $object) {
+                            $object->set('ID', $result->id);
+                            $this->track($object);
+                            $result->id++;
+                        }
+                    } // Something went wrong. ROOLBACK;
+                    else {
+                        $this->getAdapter()->execute('ROLLBACK;');
+                        throw new FailedToInsertException();
+                    }
+                } catch (Throwable $e) {
+                    $this->getAdapter()->execute('ROLLBACK;');
+                    throw $e;
                 }
             }
         }
@@ -192,93 +209,105 @@ class Manager extends Singleton
      */
     private function _flush_update()
     {
-        global $wpdb;
-
         // Get a list of tables and columns that have data to update.
         $update = $this->tracked->getInsertUpdateTableData('getChangedObjects');
 
-        // Process the INSERTs
+        // Process the UPDATESs
         if (count($update)) {
             // Build the combined query for table: $tablename
             foreach ($update as $classname => $values) {
-                $table_name = $values['table_name'];
+                $tableName = $values['table_name'];
+                $sql = '';
 
-                $sql = "INSERT INTO " . $table_name . " (ID, " . implode(", ", $values['columns']) . ")
-          VALUES
-          ";
+                try {
+                    $sql .= "INSERT INTO " . $tableName . "
+                        (" . implode(", ", $values['columns']) . ")
+                        VALUES
+                         ";
 
-                while ($values['placeholders_count'] > 0) {
-                    $sql .= "(%d, " . implode(", ", $values['placeholders']) . ")";
+                    while ($values['placeholders_count'] > 0) {
+                        $sql .= "(" . implode(", ", $values['placeholders']) . ")";
 
-                    if ($values['placeholders_count'] > 1) {
-                        $sql .= ",
-            ";
+                        if ($values['placeholders_count'] > 1) {
+                            $sql .= ",
+                            ";
+                        }
+
+                        $values['placeholders_count'] -= 1;
                     }
 
-                    $values['placeholders_count'] -= 1;
-                }
+                    $sql .= "
+                        ON DUPLICATE KEY UPDATE
+                        ";
+                    
+                    $update_set = [];
 
-                $sql .= "
-        ON DUPLICATE KEY UPDATE
-        ";
+                    foreach ($values['columns'] as $column) {
+                        if ($column == 'ID') {
+                            continue;
+                        }
 
-                $update_set = [];
-                foreach ($values['columns'] as $column) {
-                    $update_set[] = $column . "=VALUES(" . $column . ")";
-                }
-                $sql .= implode(", ", $update_set) . ";";
+                        $update_set[] = $column . " = VALUES(" . $column . ")";
+                    }
 
-                // Insert using Wordpress prepare() which provides SQL injection protection (apparently).
-                $prepared = $wpdb->prepare($sql, $values['values']);
+                    $sql .= implode(", ", $update_set) . ";";
 
-                $count = $wpdb->query($prepared);
+                    // Update using WordPress prepare() which provides SQL injection protection (apparently).
+                    $count = $this->getAdapter()->execute($sql, $values['values']);
 
-                // Start tracking all the added objects.
-                if ($count) {
-                    array_walk($values['objects'], function ($object) {
-                        $this->track($object);
-                    });
-                } // Something went wrong.
-                else {
-                    throw new FailedToUpdateException();
+                    if ($count) {
+                        foreach ($values['objects'] as $object) {
+                            $this->track($object);
+                        }
+                    } // Something went wrong. ROOLBACK;
+                    else {
+                        throw new FailedToUpdateException();
+                    }
+                } catch (Throwable $e) {
+                    $this->getAdapter()->execute('ROLLBACK;');
+                    throw $e;
                 }
             }
         }
     }
 
-    /**
-     *
-     */
     private function _flush_delete()
     {
-        global $wpdb;
-
-        // Get a list of tables and columns that have data to update.
+        // Get a list of tables and columns that have data delete.
         $update = $this->tracked->getRemoveTableData();
 
-        // Process the INSERTs
+        // Process the DELETEs
         if (count($update)) {
             // Build the combined query for table: $tablename
             foreach ($update as $classname => $values) {
                 $table_name = Mapper::instance($classname)->getPrefix() . $values['table_name'];
 
-                // Build the SQL.
-                $sql = "DELETE FROM " . $table_name . " WHERE ID IN (" . implode(
-                        ", ",
-                        array_fill(
-                            0,
-                            count($values['values']),
-                            "%d"
-                        )
-                    ) . ");";
+                try {
+                    // Build the SQL.
+                    $sql = "DELETE FROM " . $table_name . " WHERE ID IN (" . implode(
+                            ", ",
+                            array_fill(
+                                0,
+                                count($values['values']),
+                                "%d"
+                            )
+                        ) . ");";
 
-                // Process all deletes for a particular table together as a single query.
-                $prepared = $wpdb->prepare($sql, $values['values']);
-                $count = $wpdb->query($prepared);
 
-                // Really remove the object from the tracking list.
-                foreach ($values['objects'] as $obj_hash => $object) {
-                    $this->clean($object);
+                    // Process all deletes for a particular table together as a single query.
+                    $count = $this->adapter->execute($sql, $values['values']);
+
+                    // Really remove the object from the tracking list.
+                    if($count){
+                        foreach ($values['objects'] as $object) {
+                            $this->clean($object);
+                        }    
+                    }else{
+                        throw new FailedToDeleteException();
+                    }
+                    
+                } catch (Throwable $e) {
+                    throw $e;
                 }
             }
         }
@@ -288,7 +317,13 @@ class Manager extends Singleton
      * Apply changes to all models queued up with persist().
      * Attempts to combine queries to reduce MySQL load.
      *
+     * @throws Exceptions\RepositoryClassNotDefinedException
+     * @throws Exceptions\RequiredAnnotationMissingException
+     * @throws Exceptions\UnknownColumnTypeException
+     * @throws FailedToInsertException
      * @throws FailedToUpdateException
+     * @throws ReflectionException
+     * @throws Throwable
      */
     public function flush()
     {

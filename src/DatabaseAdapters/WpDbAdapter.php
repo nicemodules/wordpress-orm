@@ -2,7 +2,6 @@
 
 namespace NiceModules\ORM\DatabaseAdapters;
 
-use mysqli_result;
 use NiceModules\ORM\Exceptions\AllowSchemaUpdateIsFalseException;
 use NiceModules\ORM\Mapper;
 use wpdb;
@@ -32,8 +31,6 @@ class WpDbAdapter implements DatabaseAdapter
 
     /**
      * Execute mysql query
-     * @param string $query
-     * @param array $values
      * @return bool|int|null
      */
     function execute(string $query, array $values = [])
@@ -46,17 +43,9 @@ class WpDbAdapter implements DatabaseAdapter
     }
 
     /**
-     * @param array $queries
-     * @return bool|int|mysqli_result|null
+     * Fetch results from database
+     * @return bool|int|null
      */
-    function executeTransaction($queries)
-    {
-        array_push($queries, 'START TRANSACTION;');
-        array_unshift($queries, 'COMMIT;');
-
-        return $this->execute(implode(PHP_EOL, $queries));
-    }
-
     public function fetch(string $query, array $values = [])
     {
         if ($values) {
@@ -64,6 +53,15 @@ class WpDbAdapter implements DatabaseAdapter
         }
 
         return $this->wpdb->get_results($query);
+    }
+
+    public function fetchRow(string $query, array $values = [])
+    {
+        if ($values) {
+            $query = $this->wpdb->prepare($query, $values);
+        }
+
+        return $this->wpdb->get_row($query);
     }
 
     public function escape($value)
@@ -121,6 +119,5 @@ class WpDbAdapter implements DatabaseAdapter
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
     }
-
-
+    
 }

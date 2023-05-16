@@ -75,7 +75,6 @@ class TrackedCollection implements ArrayAccess
             } else {
                 $data[$modelClass]['values'] = array_merge(
                     $data[$modelClass]['values'],
-                    [$model->getId()],
                     $model->getAllUnkeyedValues()
                 );
             }
