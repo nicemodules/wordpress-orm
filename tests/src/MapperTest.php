@@ -6,11 +6,10 @@ use NiceModules\ORM\Annotations\Column;
 use NiceModules\ORM\Annotations\Table;
 use NiceModules\ORM\Exceptions\AllowDropIsFalseException;
 use NiceModules\ORM\Exceptions\AllowSchemaUpdateIsFalseException;
-
 use NiceModules\ORM\Mapper;
-use NiceModules\ORM\Models\Test\Foo;
 use NiceModules\ORM\Models\Test\Bar;
 use NiceModules\ORM\Models\Test\Baz;
+use NiceModules\ORM\Models\Test\Foo;
 use PHPUnit\Framework\TestCase;
 
 
@@ -21,7 +20,7 @@ class MapperTest extends TestCase
         $mapper = Mapper::instance(Foo::class);
         $this->assertInstanceOf(Mapper::class, $mapper);
     }
-    
+
     public function testGetPlaceholders()
     {
         $mapper = Mapper::instance(Foo::class);
@@ -31,12 +30,12 @@ class MapperTest extends TestCase
             'bar_ID' => '%d',
             'ID' => '%d',
         ];
-        foreach ($expected as $name => $placeholder){
-            $this->assertArrayHasKey($name, $placeholders);    
-            $this->assertContains($placeholder, $placeholders);    
+        foreach ($expected as $name => $placeholder) {
+            $this->assertArrayHasKey($name, $placeholders);
+            $this->assertContains($placeholder, $placeholders);
         }
     }
-    
+
     public function testGetPrefix()
     {
         global $wpdb;
@@ -51,8 +50,9 @@ class MapperTest extends TestCase
         $column = $mapper->getColumn('foo');
         $this->assertNull($column);
     }
-    
-    public function testGetColums(){
+
+    public function testGetColums()
+    {
         $mapper = Mapper::instance(Foo::class);
         $array = $mapper->getColumns();
         $this->assertNotEmpty($array);
@@ -93,7 +93,7 @@ class MapperTest extends TestCase
         print_r($result);
         print_r(PHP_EOL);
     }
-    
+
     public function testAllowSchemaUpdateIsFalseException()
     {
         $mapper = Mapper::instance(Baz::class);
@@ -108,16 +108,16 @@ class MapperTest extends TestCase
 
         $this->fail('Expected exception was not thrown');
     }
-    
+
     public function testDropTable()
     {
         global $wpdb;
         $mapper = Mapper::instance(Foo::class);
         $mapper->dropTable();
-        $result = $wpdb->get_results('SHOW TABLES LIKE "' . $mapper->getTableName().'"');
+        $result = $wpdb->get_results('SHOW TABLES LIKE "' . $mapper->getTableName() . '"');
         $this->assertEmpty($result);
     }
-    
+
     public function testAllowDropIsFalseException()
     {
         $mapper = Mapper::instance(Bar::class);
@@ -129,7 +129,7 @@ class MapperTest extends TestCase
             $this->assertEquals($e->getErrorMessage(Bar::class), $e->getMessage());
             return;
         }
-        
+
         $this->fail('Expected exception was not thrown');
     }
 }

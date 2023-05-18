@@ -62,9 +62,9 @@ class BaseModelTest extends TestCase
     public function testGetPlaceholders()
     {
         $foo = new Foo();
-        
+
         $foo->set('ID', 100);
-        
+
         $this->assertEquals(Mapper::instance(Foo::class)->getPlaceholders(), $foo->getPlaceholders());
     }
 

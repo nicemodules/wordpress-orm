@@ -29,17 +29,17 @@ class ManagerTest extends TestCase
         Mapper::instance(Bar::class)->updateSchema();
         $unique = uniqid('u', true);
         $number = 10;
-        
+
         for ($i = 0; $i < $number; $i++) {
             $bar = new Bar();
             $bar->set('name', $unique . '-' . $i);
             Manager::instance()->persist($bar);
         }
         Manager::instance()->flush();
-        
+
         $barsRepository = Manager::instance()->getRepository(Bar::class);
         $bars = $barsRepository->findAll();
-        
+
         $this->assertEquals($number, count($bars));
     }
 
@@ -47,7 +47,7 @@ class ManagerTest extends TestCase
     {
         $bars = Manager::instance()->getRepository(Bar::class)->findAll();
 
-        foreach ($bars as $bar){
+        foreach ($bars as $bar) {
             $this->assertInstanceOf(Bar::class, $bar);
             Manager::instance()->remove($bar);
         }
@@ -66,14 +66,14 @@ class ManagerTest extends TestCase
         Manager::instance()->track($bar);
         $bar->set('name', 'foobar');
         Manager::instance()->flush();
-        
+
         $bar = Manager::instance()
             ->getRepository(Bar::class)
             ->createQueryBuilder()->where('name', 'foobar')
             ->buildQuery()
             ->getResult();
-        
-        $this->assertEquals($bar->get('name'),  'foobar');
+
+        $this->assertEquals($bar->get('name'), 'foobar');
 
         Manager::instance()->remove($bar);
         Manager::instance()->flush();
@@ -89,7 +89,7 @@ class ManagerTest extends TestCase
         $bar->set('name', 'foo');
         Manager::instance()->clean($bar);
         Manager::instance()->flush();
-        
+
         $changedBar = Manager::instance()
             ->getRepository(Bar::class)
             ->createQueryBuilder()->where('name', 'foo')
@@ -100,6 +100,5 @@ class ManagerTest extends TestCase
 
         Manager::instance()->remove($bar);
         Manager::instance()->flush();
-        
     }
 }
