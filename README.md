@@ -104,22 +104,22 @@ Once you have a model object, you need to tell Wordpress to create a table to ma
 Use the mapper class:
 
 ```php
-use NiceModules\ORM\Mapping;
+use NiceModules\ORM\Mapper;
 ```
 
 
 First, get an instance of the ORM mapper object. This static function below makes sure `new Mapping()` is called once
-per request. Any subsequent calls to `::getMapper()` will return the same object. This means you don't need to
+per request. Any subsequent calls to `::instance()` will return the same object. This means you don't need to
 continually create a new instance of Mapper() and parse the annotations.     
 
 ```php
-$mapper = Mapping::getMapper();
+$mapper = Mapping::instance(Foo::class);
 ```
 
 Now update the database schema for this class as follows: 
 
 ```php
-$mapper->updateSchema(Product::class);
+$mapper->updateSchema();
 ```
 
 This function uses the internal Wordpress dbDelta system to compare and update database tables. If your table doesn't
@@ -139,18 +139,18 @@ use NiceModules\ORM\Manager;
 Create a new instance of your model:
 
 ```php
-$product = new Product();
-$product->set('title', 'Some title');
-$product->set('time', '2017-11-03 10:04:02');
-$product->set('views', 34);
-$product->set('short_name', 'something_here');
+$Foo = new Foo();
+$Foo->set('title', 'Some title');
+$Foo->set('time', '2017-11-03 10:04:02');
+$Foo->set('views', 34);
+$Foo->set('short_name', 'something_here');
 ```
 
 Get an instance of the ORM manager class. Like the Mapping class, this static function returns
 a reusable instance of the manager class. 
 
 ```php
-$orm = Manager::getManager();
+$orm = Manager::instance();
 ```
 
 Now queue up these changes to apply to the database. Calling this does NOT immediately apply the changes to the
@@ -159,7 +159,7 @@ ready to apply them, the ORM will combine these changes into single SQL queries 
 number of calls made to the database. 
 
 ```php
-$orm->persist($product);
+$orm->persist($Foo);
 ```
 
 Once, you're ready to apply all changes to your database (syncing what you have persisted to the database), call
@@ -191,7 +191,7 @@ for querying specific object types.
 By default all object types have a base repository which you can get access to by passing in the object type as follows:
 
 ```php
-$repository = $orm->getRepository(Product::class);
+$repository = $orm->getRepository(Foo::class);
 ```
 
 **With the query builder**
@@ -254,7 +254,7 @@ Return an object by id:
 
 ```php
 $results = Manager::getManager()
-            ->getRepository(Product::class)
+            ->getRepository(Foo::class)
             ->find($id);
 ```
  
@@ -262,7 +262,7 @@ Return all objects sorted by ascending id.
 
 ```php
 $results = Manager::getManager()
-            ->getRepository(Product::class)
+            ->getRepository(Foo::class)
             ->findAll();
 ```
  
@@ -270,7 +270,7 @@ Return all objects matching pairs of property name and value:
 
 ```php
 $results = Manager::getManager()
-            ->getRepository(Product::class)
+            ->getRepository(Foo::class)
             ->findBy([$property_name_1 => $value_1, $property_name_2 => $value_2]);
 ```
  
@@ -287,10 +287,10 @@ For example:
  
  ```php
 $orm = Manager::getManager();
-$repository = $orm->getRepository(Product::class);
+$repository = $orm->getRepository(Foo::class);
 
-$product = $repository->find(9);   // Load an object by known ID=9
-$product->set('title', 'TITLE HAS CHANGED!');
+$Foo = $repository->find(9);   // Load an object by known ID=9
+$Foo->set('title', 'TITLE HAS CHANGED!');
 
 $orm->flush();
 ```
@@ -307,11 +307,11 @@ For example:
 
 ```php
 $orm = Manager::getManager();
-$repository = $orm->getRepository(Product::class);
+$repository = $orm->getRepository(Foo::class);
 
-$product = $repository->find(9);   // Load an object by known ID=9
+$Foo = $repository->find(9);   // Load an object by known ID=9
 
-$orm->remove($product);   // Queue up the object to be removed from the database. 
+$orm->remove($Foo);   // Queue up the object to be removed from the database. 
 
 $orm->flush();
 ```
@@ -338,7 +338,7 @@ $mapper = Mapping::getMapper();
 Now pass the model classname to dropTable() like this:
 
 ```php
-$mapper->dropTable(Product::class);
+$mapper->dropTable(Foo::class);
 ```
 
 

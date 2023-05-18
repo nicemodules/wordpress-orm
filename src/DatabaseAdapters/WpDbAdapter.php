@@ -18,17 +18,6 @@ class WpDbAdapter implements DatabaseAdapter
         $this->wpdb = $wpdb;
     }
 
-    public function connect()
-    {
-        global $wpdb;
-        $this->wpdb = $wpdb;
-    }
-
-    public function disconnect()
-    {
-        $this->wpdb = null;
-    }
-
     /**
      * Execute mysql query
      * @return bool|int|null
@@ -119,5 +108,5 @@ class WpDbAdapter implements DatabaseAdapter
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
     }
-    
+
 }

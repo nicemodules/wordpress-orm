@@ -22,14 +22,14 @@ class Table
     public string $inherits;
     public string $repository;
     public array $column_order;
-    
+
     public function __construct(array $values)
     {
-        foreach ($values as $name => $value){
+        foreach ($values as $name => $value) {
             $this->$name = $value;
         }
-        
-        foreach ($values as $name => $value){
+
+        foreach ($values as $name => $value) {
             switch ($name) {
                 case 'inherits':
                     {
@@ -37,11 +37,11 @@ class Table
                         $reader = new AnnotationReader();
                         $parentAnnotations = $reader->getClassAnnotation($inheritedReflectionClass, self::class);
                         $thisReflectionClass = new ReflectionClass($this);
-                        
+
                         if ($parentAnnotations) {
                             foreach ($thisReflectionClass->getProperties() as $property) {
                                 $propertyName = $property->getName();
-                                
+
                                 if (isset($parentAnnotations->$propertyName) && !isset($this->$propertyName)) {
                                     $this->$propertyName = $parentAnnotations->$propertyName;
                                 }

@@ -149,7 +149,7 @@ class Mapper
     {
         return array_keys($this->columns);
     }
-    
+
     /**
      * @return array
      */
@@ -164,6 +164,60 @@ class Mapper
     public function getForeignKeys(): array
     {
         return $this->foreignKeys;
+    }
+
+    /**
+     * Compares a database table schema to the model schema (as defined in th
+     * annotations). If there are any differences, the database schema is modified to
+     * match the model.
+     *
+     * @throws AllowSchemaUpdateIsFalseException
+     */
+    public function updateSchema()
+    {
+        Manager::instance()->getAdapter()->updateSchema($this);
+    }
+
+    /**
+     * @throws AllowDropIsFalseException
+     * @throws AllowSchemaUpdateIsFalseException
+     */
+    public function dropTable()
+    {
+        global $wpdb;
+
+        // Are we allowed to update the schema of this model in the db?
+        if (!$this->table->allow_schema_update) {
+            throw new AllowSchemaUpdateIsFalseException($this->class);
+        }
+
+        // Additional protection before drop
+        if (!$this->table->allow_drop) {
+            throw new AllowDropIsFalseException($this->class);
+        }
+
+        // Drop the table.
+        $sql = "DROP TABLE IF EXISTS " . $this->getPrefix() . $this->table->name;
+        $wpdb->query($sql);
+    }
+
+    /**
+     * Inherited model properties needs to be sorted in schema
+     */
+    protected function sort(&$array)
+    {
+        if (isset($this->table->column_order)) {
+            $tmp = $array;
+            $array = [];
+
+            foreach ($this->table->column_order as $name) {
+                if (isset($tmp[$name])) {
+                    $array[$name] = $tmp[$name];
+                    unset($tmp[$name]);
+                }
+            }
+            $array = array_merge($array, $tmp);
+        }
     }
 
     /**
@@ -217,12 +271,12 @@ class Mapper
         foreach ($reflection_class->getProperties() as $property) {
             // Get the annotations of this property.
             $column = $this->getPropertyAnnotations($reflection_class, $property->name);
-            
+
             // Silently ignore properties that do not have the ORM column type annotation.
             if (isset($column->type)) {
                 // Register annotation 
                 $this->columns[$property->name] = $column;
-                
+
                 if (isset($column->primary)) {
                     $this->primaryKeys[] = $property->name;
                 }
@@ -231,7 +285,7 @@ class Mapper
                 $this->addPlaceholder($property, $column);
             }
         }
-        
+
         $this->sort($this->schemas);
         $this->sort($this->columns);
         $this->sort($this->placeholders);
@@ -281,19 +335,19 @@ class Mapper
         if (isset($column->default)) {
             $schema_string .= ' DEFAULT' . $column->default;
         }
-        
+
         if ((isset($column->primary) && $column->primary) || (isset($column->auto_incremet) && $column->auto_incremet)) {
             $schema_string .= ' auto_increment';
         }
 
         if (isset($column->many_to_one)) {
-            if(!isset($column->many_to_one->modelName) || !isset($column->many_to_one->propertyName)){
+            if (!isset($column->many_to_one->modelName) || !isset($column->many_to_one->propertyName)) {
                 throw new IncompleteManyToOneException($this->class, $property->name);
             }
-            
+
             $this->foreignKeys[$property->name] = $column->many_to_one;
         }
-        
+
         $this->schemas[$property->name] = $schema_string;
     }
 
@@ -369,59 +423,5 @@ class Mapper
                 }
             }
         }
-    }
-
-    /**
-     * Compares a database table schema to the model schema (as defined in th
-     * annotations). If there are any differences, the database schema is modified to
-     * match the model.
-     *
-     * @throws AllowSchemaUpdateIsFalseException
-     */
-    public function updateSchema()
-    {
-        Manager::instance()->getAdapter()->updateSchema($this);  
-    }
-
-    /**
-     * Inherited model properties needs to be sorted in schema
-     */
-    protected function sort(&$array)
-    {
-        if (isset($this->table->column_order)) {
-            $tmp = $array;
-            $array = [];
-
-            foreach ($this->table->column_order as $name) {
-                if (isset($tmp[$name])) {
-                    $array[$name] = $tmp[$name];
-                    unset($tmp[$name]);
-                }
-            }
-            $array = array_merge($array, $tmp);
-        }
-    }
-
-    /**
-     * @throws AllowDropIsFalseException
-     * @throws AllowSchemaUpdateIsFalseException
-     */
-    public function dropTable()
-    {
-        global $wpdb;
-
-        // Are we allowed to update the schema of this model in the db?
-        if (!$this->table->allow_schema_update) {
-            throw new AllowSchemaUpdateIsFalseException($this->class);
-        }
-
-        // Additional protection before drop
-        if (!$this->table->allow_drop) {
-            throw new AllowDropIsFalseException($this->class);
-        }
-
-        // Drop the table.
-        $sql = "DROP TABLE IF EXISTS " . $this->getPrefix() . $this->table->name;
-        $wpdb->query($sql);
     }
 }

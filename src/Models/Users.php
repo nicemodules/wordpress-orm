@@ -6,9 +6,9 @@ use NiceModules\ORM\Annotations\Column;
 use NiceModules\ORM\Annotations\Table;
 
 /**
- * @Table(type="Entity", 
- *     name="users", 
- *     allow_schema_update=false, 
+ * @Table(type="Entity",
+ *     name="users",
+ *     allow_schema_update=false,
  *     repository="\NiceModules\ORM\Repositories\UsersRepository"
  * )
  */
@@ -19,7 +19,7 @@ class Users extends IdModel
      * @Column(type="bigint", length="20", null="NOT NULL", primary=true)
      */
     protected int $ID;
-    
+
     /**
      * @Column(type="varchar", length="60", null="NOT NULL");
      */

@@ -7,16 +7,17 @@ use NiceModules\ORM\Exceptions\NoQueryException;
 use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
 use NiceModules\ORM\QueryBuilder\Where;
 use NiceModules\ORM\Repositories\BaseRepository;
+use ReflectionException;
 
 class QueryBuilder
 {
 
     private string $query;
-    
+
     private ?Where $where;
 
     private array $whereValues = [];
-    
+
     private array $order_by = [];
 
     private string $limit;
@@ -84,13 +85,13 @@ class QueryBuilder
         ) {
             throw new InvalidOperatorException($comparison);
         }
-        
-        if($this->where === null){
+
+        if ($this->where === null) {
             $this->where = new Where($this);
         }
-        
+
         $this->where->addCondition($property, $value, $comparison, $operator);
-        
+
         return $this;
     }
 
@@ -151,7 +152,7 @@ class QueryBuilder
      * @throws Exceptions\RepositoryClassNotDefinedException
      * @throws Exceptions\RequiredAnnotationMissingException
      * @throws Exceptions\UnknownColumnTypeException
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     public function buildQuery()
     {
@@ -160,31 +161,31 @@ class QueryBuilder
         $this->query = "SELECT * FROM " . Mapper::instance($this->repository->getObjectClass())->getTableName() . " ";
 
         // Combine the WHERE clauses and add to the SQL statement.
-        if($this->where !== null){
-            $this->query .= 'WHERE '.$this->where->build() . PHP_EOL;    
+        if ($this->where !== null) {
+            $this->query .= 'WHERE ' . $this->where->build() . PHP_EOL;
         }
 
         // Add the ORDER BY clause.
         if ($this->order_by) {
-            $this->query .= "ORDER BY ". implode(', ', $this->order_by);
+            $this->query .= "ORDER BY " . implode(', ', $this->order_by);
         }
 
         // Add the LIMIT clause.
         if ($this->limit) {
             $this->query .= $this->limit;
         }
-        
+
         return $this;
     }
-    
-    
+
+
     public function getRawResult(): array
     {
         $this->result = Manager::instance()->getAdapter()->fetch($this->query, $this->whereValues);
-        
+
         return $this->result;
     }
-    
+
     /**
      * Run the query returning either a single object or an array of objects.
      *
@@ -196,7 +197,7 @@ class QueryBuilder
     public function getResult($always_array = false)
     {
         $this->result = Manager::instance()->getAdapter()->fetch($this->query, $this->whereValues);
-        
+
         if ($this->result) {
             // Classname for this repository.
             $object_classname = $this->repository->getObjectClass();
@@ -231,23 +232,22 @@ class QueryBuilder
 
             // Otherwise, the return an array of objects.
             return $objects;
-        } 
-        
+        }
+
         return [];
     }
-    
+
 
     /**
      * @return Where|null
      */
     public function getWhere(): ?Where
     {
-        if($this->where == null){
+        if ($this->where == null) {
             $this->where = new Where($this);
         }
 
         return $this->where;
-        
     }
 
     /**

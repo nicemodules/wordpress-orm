@@ -3,8 +3,8 @@
 namespace NiceModules\ORM\Models;
 
 use NiceModules\ORM\Annotations\Column;
-use NiceModules\ORM\Annotations\Table;
 use NiceModules\ORM\Annotations\ManyToOne;
+use NiceModules\ORM\Annotations\Table;
 
 /**
  * @Table(

@@ -2,7 +2,6 @@
 
 namespace NiceModules\ORM\Repositories;
 
-use NiceModules\ORM\Annotations\Table;
 use NiceModules\ORM\Exceptions\InvalidOperatorException;
 use NiceModules\ORM\Exceptions\NoQueryException;
 use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
@@ -89,7 +88,7 @@ class BaseRepository
      */
     public function getObjectPropertyPlaceholders()
     {
-        return  $this->mapper->getPlaceholders();
+        return $this->mapper->getPlaceholders();
     }
 
     /**

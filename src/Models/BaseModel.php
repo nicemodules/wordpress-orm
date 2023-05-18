@@ -43,7 +43,7 @@ abstract class BaseModel
         $columns = Mapper::instance($class_name)->getColumns();
 
         foreach (array_keys($columns) as $property) {
-            if($property == 'ID'){
+            if ($property == 'ID') {
                 continue;
             }
             $object->set($property, $this->getRaw($property));
@@ -58,12 +58,13 @@ abstract class BaseModel
         if (isset($this->ID)) {
             return $this->ID;
         }
-        
+
         return null;
     }
-    
-    public function hasId(){
-        if(!isset($this->ID) || (isset($this->ID) && empty($this->ID))){
+
+    public function hasId()
+    {
+        if (!isset($this->ID) || (isset($this->ID) && empty($this->ID))) {
             return false;
         }
         return true;
@@ -96,11 +97,11 @@ abstract class BaseModel
     public function getColumns(): array
     {
         $columns = Mapper::instance(get_called_class())->getColumns();
-        
-        if(!$this->hasId()){
+
+        if (!$this->hasId()) {
             unset($columns['ID']);
         }
-        
+
         return $columns;
     }
 
@@ -127,10 +128,10 @@ abstract class BaseModel
     {
         $placeholders = Mapper::instance(get_called_class())->getPlaceholders();
 
-        if(!$this->hasId()){
+        if (!$this->hasId()) {
             unset($placeholders['ID']);
         }
-        
+
         return $placeholders;
     }
 
@@ -181,7 +182,7 @@ abstract class BaseModel
         if (isset($this->$property)) {
             return $this->$property;
         }
-        
+
         return null;
     }
 

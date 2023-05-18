@@ -2,8 +2,8 @@
 
 namespace NiceModules\ORM\Models\Test;
 
-use NiceModules\ORM\Annotations\Table;
 use NiceModules\ORM\Annotations\Column;
+use NiceModules\ORM\Annotations\Table;
 use NiceModules\ORM\Models\BaseModel;
 
 /**

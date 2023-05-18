@@ -1,4 +1,5 @@
 <?php
+
 namespace NiceModules\ORM;
 
 abstract class Singleton
@@ -9,10 +10,6 @@ abstract class Singleton
     {
     }
 
-    private function __clone()
-    {
-    }
-
     public static function instance()
     {
         $class = static::class;
@@ -20,5 +17,9 @@ abstract class Singleton
             self::$instances[$class] = new static();
         }
         return self::$instances[$class];
+    }
+
+    private function __clone()
+    {
     }
 }

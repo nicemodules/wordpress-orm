@@ -10,7 +10,7 @@ use Exception;
 class ErrorArgsException extends Exception
 {
     protected string $error = 'Unknown exception';
-    
+
 
     public function __construct(...$messageArgs)
     {

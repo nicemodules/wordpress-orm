@@ -2,8 +2,6 @@
 
 namespace NiceModules\ORM\Exceptions;
 
-use Exception;
-
 /**
  * Class PropertyDoesNotExistException
  *

@@ -8,13 +8,13 @@ use PDO;
 class PDOAdapter implements DatabaseAdapter
 {
     const NAME = 'PDO';
-    
+
     private PDO $pdo;
 
     /**
-     * 
+     *
      */
-    public function connect()
+    public function __construct()
     {
         /*  * *************** CONFIGURATION DB *************** */
         $dbServer = WORDPRESS_DB_SERVER;
@@ -26,18 +26,13 @@ class PDOAdapter implements DatabaseAdapter
         $this->pdo = new mPDO('mysql:host=' . $dbServer . ';dbname=' . $dbName, $dbUser, $dbPassword);
     }
 
-    public function disconnect()
-    {
-        $this->pdo = null;
-    }
-
     public function execute($query, $values = array())
     {
         $stmt = $this->pdo->prepare($query);
         $stmt->execute($values);
         return $stmt->rowCount();
     }
-    
+
 
     public function fetch(string $query, array $values = [])
     {
@@ -45,8 +40,20 @@ class PDOAdapter implements DatabaseAdapter
         $stmt->execute($values);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
-    
-    
+
+    public function fetchRow(string $query, array $values = [])
+    {
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute($values);
+        $rows = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (isset($rows[0])) {
+            return $rows[0];
+        }
+
+        return [];
+    }
+
     public function getPrefix(): string
     {
         // TODO: Implement getPrefix() method.
@@ -68,4 +75,6 @@ class PDOAdapter implements DatabaseAdapter
     {
         return $this->pdo->quote($value);
     }
+
+
 }

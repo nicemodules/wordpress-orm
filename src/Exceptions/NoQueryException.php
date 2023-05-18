@@ -2,8 +2,6 @@
 
 namespace NiceModules\ORM\Exceptions;
 
-use Exception;
-
 /**
  * Class NoQueryException
  *
@@ -12,5 +10,5 @@ use Exception;
 class NoQueryException extends ErrorArgsException
 {
     protected string $error = 'No query was built. Run ->buildQuery() first.';
-    
+
 }

@@ -2,11 +2,9 @@
 
 namespace NiceModules\ORM\Exceptions;
 
-use Exception;
-
 class IncompleteIndexException extends ErrorArgsException
 {
-     protected string $error = 'Indexes of model %s are incomplete.';
+    protected string $error = 'Indexes of model %s are incomplete.';
 
     /**
      * @param string $className

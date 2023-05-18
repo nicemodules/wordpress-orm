@@ -18,7 +18,7 @@ class PostMeta extends BaseModel
      * @Column(type="bigint", length="20", null="NOT NULL", primary=true)
      */
     protected int $ID;
-    
+
     /**
      * @Column(type="bigint", length="20", null="NOT NULL");
      */

@@ -66,19 +66,19 @@ class Where implements Condition
     }
 
     /**
-     * @param string $operator
-     */
-    public function setOperator(string $operator): void
-    {
-        $this->operator = $operator;
-    }
-
-    /**
      * @return string
      */
     public function getOperator(): string
     {
         return $this->operator;
+    }
+
+    /**
+     * @param string $operator
+     */
+    public function setOperator(string $operator): void
+    {
+        $this->operator = $operator;
     }
 
     /**
@@ -92,9 +92,9 @@ class Where implements Condition
         foreach ($conditions as $condition) {
             $query = $condition->build();
             if ($queries) {
-                $query =  $condition->getOperator() . ' ' . $query;
+                $query = $condition->getOperator() . ' ' . $query;
             }
-            
+
             $queries[] = $query;
         }
 

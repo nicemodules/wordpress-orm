@@ -127,6 +127,25 @@ class Manager extends Singleton
     }
 
     /**
+     * Apply changes to all models queued up with persist().
+     * Attempts to combine queries to reduce MySQL load.
+     *
+     * @throws Exceptions\RepositoryClassNotDefinedException
+     * @throws Exceptions\RequiredAnnotationMissingException
+     * @throws Exceptions\UnknownColumnTypeException
+     * @throws FailedToInsertException
+     * @throws FailedToUpdateException
+     * @throws ReflectionException
+     * @throws Throwable
+     */
+    public function flush()
+    {
+        $this->_flush_update();
+        $this->_flush_insert();
+        $this->_flush_delete();
+    }
+
+    /**
      * Add new objects to the database.
      * This will perform one query per table no matter how many records need to
      * be added.
@@ -294,7 +313,7 @@ class Manager extends Singleton
 
                     // Process all deletes for a particular table together as a single query.
                     $count = $this->adapter->execute($sql, $values['values']);
-                    
+
                     // Really remove the object from the tracking list.
                     if ($count) {
                         foreach ($values['objects'] as $object) {
@@ -308,25 +327,6 @@ class Manager extends Singleton
                 }
             }
         }
-    }
-
-    /**
-     * Apply changes to all models queued up with persist().
-     * Attempts to combine queries to reduce MySQL load.
-     *
-     * @throws Exceptions\RepositoryClassNotDefinedException
-     * @throws Exceptions\RequiredAnnotationMissingException
-     * @throws Exceptions\UnknownColumnTypeException
-     * @throws FailedToInsertException
-     * @throws FailedToUpdateException
-     * @throws ReflectionException
-     * @throws Throwable
-     */
-    public function flush()
-    {
-        $this->_flush_update();
-        $this->_flush_insert();
-        $this->_flush_delete();
     }
 
 }

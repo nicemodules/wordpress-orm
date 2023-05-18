@@ -2,8 +2,6 @@
 
 namespace NiceModules\ORM\Exceptions;
 
-use Exception;
-
 /**
  * Class InvalidOperatorException
  *
@@ -20,5 +18,5 @@ class InvalidOperatorException extends ErrorArgsException
     {
         parent::__construct($operator);
     }
-    
+
 }

@@ -3,7 +3,12 @@
 namespace NiceModules\ORM\Collections;
 
 use ArrayAccess;
+use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
+use NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException;
+use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
+use NiceModules\ORM\Exceptions\UnknownColumnTypeException;
 use NiceModules\ORM\Models\BaseModel;
+use ReflectionException;
 
 
 /**
@@ -14,10 +19,10 @@ use NiceModules\ORM\Models\BaseModel;
  */
 class TrackedCollection implements ArrayAccess
 {
-    const _OBJECT_NEW = 1 ;
-    const _OBJECT_TRACKED = 2 ;
-    const _OBJECT_CLEAN = -1 ;
-    
+    const _OBJECT_NEW = 1;
+    const _OBJECT_TRACKED = 2;
+    const _OBJECT_CLEAN = -1;
+
     /**
      * The internal array of objects to track.
      *
@@ -38,6 +43,11 @@ class TrackedCollection implements ArrayAccess
      *
      * @param $iterator
      * @return array
+     * @throws PropertyDoesNotExistException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
+     * @throws ReflectionException
      */
     public function getInsertUpdateTableData($iterator)
     {
@@ -48,7 +58,7 @@ class TrackedCollection implements ArrayAccess
             /** @var BaseModel $model */
             $model = $item['model'];
             $modelClass = get_class($model);
-            
+
             // Add the table name and schema data (only once).
             if (!isset($data[$modelClass])) {
                 $data[$modelClass] = [
@@ -79,7 +89,7 @@ class TrackedCollection implements ArrayAccess
                 );
             }
         }
-        
+
         return $data;
     }
 
@@ -89,7 +99,7 @@ class TrackedCollection implements ArrayAccess
     public function getRemoveTableData()
     {
         $data = [];
-        
+
         foreach ($this->getRemovedObjects() as $item) {
             if (!isset($data[get_class($item['last_state'])])) {
                 $data[get_class($item['last_state'])] = [
