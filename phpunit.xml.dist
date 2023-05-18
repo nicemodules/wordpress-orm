@@ -14,6 +14,11 @@
         <include>
             <directory suffix=".php">src</directory>
         </include>
+        <exclude>
+            <file>src/DatabaseAdapters/PDOAdapter.php</file>
+            <file>src/Singleton.php</file>
+            <file>src/Collections/RelatedCollection.php</file>
+        </exclude>
     </coverage>
     <testsuites>
         <testsuite name="Wordpress-ORM Test Suite">
