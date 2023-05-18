@@ -5,9 +5,6 @@ namespace NiceModules\ORM\Collections;
 use ArrayAccess;
 use NiceModules\ORM\Models\BaseModel;
 
-define('_OBJECT_NEW', 1);
-define('_OBJECT_TRACKED', 2);
-define('_OBJECT_CLEAN', -1);
 
 /**
  * Class TrackedCollection
@@ -17,7 +14,10 @@ define('_OBJECT_CLEAN', -1);
  */
 class TrackedCollection implements ArrayAccess
 {
-
+    const _OBJECT_NEW = 1 ;
+    const _OBJECT_TRACKED = 2 ;
+    const _OBJECT_CLEAN = -1 ;
+    
     /**
      * The internal array of objects to track.
      *
@@ -89,8 +89,7 @@ class TrackedCollection implements ArrayAccess
     public function getRemoveTableData()
     {
         $data = [];
-
-
+        
         foreach ($this->getRemovedObjects() as $item) {
             if (!isset($data[get_class($item['last_state'])])) {
                 $data[get_class($item['last_state'])] = [
@@ -115,14 +114,14 @@ class TrackedCollection implements ArrayAccess
     {
         switch ($state) {
             // If new, objects will have a 'model' but no 'last_state',
-            case _OBJECT_NEW:
+            case self::_OBJECT_NEW:
                 $this->list[$object->getHash()] = [
                     'model' => $object,
                 ];
                 break;
 
             // If new, objects will have both a 'model' and a 'last_state',
-            case _OBJECT_TRACKED:
+            case self::_OBJECT_TRACKED:
                 $this->list[$object->getHash()] = [
                     'model' => $object,
                     'last_state' => clone $object
@@ -130,7 +129,7 @@ class TrackedCollection implements ArrayAccess
                 break;
 
             // Clean an object out of the $list
-            case _OBJECT_CLEAN:
+            case self::_OBJECT_CLEAN:
                 unset($this->list[$object->getHash()]);
                 break;
         }

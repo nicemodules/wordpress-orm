@@ -83,7 +83,7 @@ class Manager extends Singleton
     {
         // Start tracking this object (because it is new, it will be tracked as
         // something to be INSERTed)
-        $this->tracked[$object] = _OBJECT_NEW;
+        $this->tracked[$object] = TrackedCollection::_OBJECT_NEW;
     }
 
     /**
@@ -94,7 +94,7 @@ class Manager extends Singleton
     public function track(BaseModel $object)
     {
         // Save it against the key.
-        $this->tracked[$object] = _OBJECT_TRACKED;
+        $this->tracked[$object] = TrackedCollection::_OBJECT_TRACKED;
     }
 
     /**
@@ -115,7 +115,7 @@ class Manager extends Singleton
     public function clean(BaseModel $object)
     {
         // Save it against the key.
-        $this->tracked[$object] = _OBJECT_CLEAN;
+        $this->tracked[$object] = TrackedCollection::_OBJECT_CLEAN;
     }
 
     /**
@@ -239,7 +239,7 @@ class Manager extends Singleton
                     $sql .= "
                         ON DUPLICATE KEY UPDATE
                         ";
-                    
+
                     $update_set = [];
 
                     foreach ($values['columns'] as $column) {
@@ -280,11 +280,9 @@ class Manager extends Singleton
         if (count($update)) {
             // Build the combined query for table: $tablename
             foreach ($update as $classname => $values) {
-                $table_name = Mapper::instance($classname)->getPrefix() . $values['table_name'];
-
                 try {
                     // Build the SQL.
-                    $sql = "DELETE FROM " . $table_name . " WHERE ID IN (" . implode(
+                    $sql = "DELETE FROM " . Mapper::instance($classname)->getTableName() . " WHERE ID IN (" . implode(
                             ", ",
                             array_fill(
                                 0,
@@ -296,16 +294,15 @@ class Manager extends Singleton
 
                     // Process all deletes for a particular table together as a single query.
                     $count = $this->adapter->execute($sql, $values['values']);
-
+                    
                     // Really remove the object from the tracking list.
-                    if($count){
+                    if ($count) {
                         foreach ($values['objects'] as $object) {
                             $this->clean($object);
-                        }    
-                    }else{
+                        }
+                    } else {
                         throw new FailedToDeleteException();
                     }
-                    
                 } catch (Throwable $e) {
                     throw $e;
                 }

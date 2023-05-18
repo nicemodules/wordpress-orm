@@ -2,27 +2,38 @@
 
 namespace NiceModules\ORM\QueryBuilder;
 
-class Where
+use NiceModules\ORM\QueryBuilder;
+
+class Where implements Condition
 {
     /**
-     * @var Conditons[]
+     * @var Condition[]
      */
     protected array $conditions = [];
-    /**
-     * @var Where[]
-     */
-    protected array $builders = [];
+
+    protected QueryBuilder $queryBuilder;
 
     /**
-     * @param string $column
+     * @param QueryBuilder $queryBuilder
+     */
+
+    protected string $operator;
+
+    public function __construct(QueryBuilder $queryBuilder)
+    {
+        $this->queryBuilder = $queryBuilder;
+    }
+
+    /**
+     * @param string $property
      * @param numeric|string $value
      * @param string $comparison
      * @param string $operator
      * @return Where
      */
-    public function addCondition(string $column, $value, string $comparison = '=', string $operator = 'AND')
+    public function addCondition(string $property, $value, string $comparison = '=', string $operator = 'AND')
     {
-        $this->conditions[$operator][] = new Condition($column, $value, $comparison);
+        $this->conditions[] = new WhereCondition($this->queryBuilder, $property, $value, $comparison, $operator);
         return $this;
     }
 
@@ -33,7 +44,9 @@ class Where
      */
     public function addWhere(Where $builder, string $operator = 'AND')
     {
-        $this->builders[$operator][] = $builder;
+        $this->conditions[] = $builder;
+        $builder->setOperator($operator);
+
         return $this;
     }
 
@@ -45,76 +58,48 @@ class Where
     {
         $query = '';
 
-        if($this->conditions){
+        if ($this->conditions) {
             $query .= $this->buildQueries($this->conditions);
-        }
-
-        if($this->builders){
-            $query .= $this->buildQueries($this->builders);
         }
 
         return "($query)";
     }
 
     /**
-     * @param array $conditionsByOperator
-     * @return string
-     */
-    protected function buildQueries(array $conditionsByOperator): string
-    {
-        $queries = [];
-        $whereOperator = '';
-        
-        foreach ($conditionsByOperator as $operator => $conditions) {
-            
-            $first = reset($conditions);
-            
-            if($first instanceof Where && $whereOperator === ''){
-                $whereOperator = ' '.$operator. ' ';
-            }
-            
-            $queries[$operator][] = $this->buildConditions($operator, $conditions);
-        }
-        
-        return $whereOperator . $this->buildQuery($queries);
-    }
-
-    /**
-     * @param array $queries
-     * @return string
-     */
-    protected function buildQuery(array $queries): string
-    {
-        $query = '';
-
-        if(isset( $queries['AND'])){
-            $query = implode(' AND ', $queries['AND']);
-
-            if(isset($queries['OR'])){
-                $query .= ' OR ';
-            }
-        }
-
-        if (isset($queries['OR'])) {
-            $query .= implode(' OR ', $queries['OR']);
-        }
-
-        return $query;
-    }
-
-    /**
      * @param string $operator
-     * @param Where[]|Condition[] $conditions
-     * @return string
-     * @throws PropelException
      */
-    protected function buildConditions(string $operator, array $conditions): string
+    public function setOperator(string $operator): void
+    {
+        $this->operator = $operator;
+    }
+
+    /**
+     * @return string
+     */
+    public function getOperator(): string
+    {
+        return $this->operator;
+    }
+
+    /**
+     * @param Condition[] $conditions
+     * @return string
+     */
+    protected function buildQueries(array $conditions): string
     {
         $queries = [];
-        foreach ($conditions as $condition) {
-            $queries[] = $condition->build();
-        }
-        return implode(" $operator ", $queries);
 
+        foreach ($conditions as $condition) {
+            $query = $condition->build();
+            if ($queries) {
+                $query =  $condition->getOperator() . ' ' . $query;
+            }
+            
+            $queries[] = $query;
+        }
+
+        return implode(' ', $queries);
     }
+
+
 }

@@ -80,7 +80,7 @@ class BaseRepository
      */
     public function getObjectProperties()
     {
-        return $this->mapper->getColumns();
+        return $this->mapper->getColumnNames();
     }
 
     /**
@@ -105,7 +105,7 @@ class BaseRepository
             ->where('ID', $id, '=')
             ->orderBy('ID', 'ASC')
             ->buildQuery()
-            ->getResults();
+            ->getResult();
     }
 
     /**
@@ -118,7 +118,7 @@ class BaseRepository
         return $this->createQueryBuilder()
             ->orderBy('ID', 'ASC')
             ->buildQuery()
-            ->getResults();
+            ->getResult();
     }
 
     /**
@@ -143,7 +143,15 @@ class BaseRepository
         }
         return $qb->orderBy('ID', 'ASC')
             ->buildQuery()
-            ->getResults();
+            ->getResult();
+    }
+
+    /**
+     * @return Mapper
+     */
+    public function getMapper(): Mapper
+    {
+        return $this->mapper;
     }
 
 }

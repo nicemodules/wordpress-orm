@@ -5,16 +5,21 @@ namespace NiceModules\ORM;
 use NiceModules\ORM\Exceptions\InvalidOperatorException;
 use NiceModules\ORM\Exceptions\NoQueryException;
 use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
+use NiceModules\ORM\QueryBuilder\Where;
 use NiceModules\ORM\Repositories\BaseRepository;
 
 class QueryBuilder
 {
 
-    private $where;
+    private string $query;
+    
+    private ?Where $where;
 
-    private $order_by;
+    private array $whereValues = [];
+    
+    private array $order_by = [];
 
-    private $limit;
+    private string $limit;
 
     /**
      * The query result.
@@ -26,7 +31,7 @@ class QueryBuilder
      * Reference to the repository.
      * @var BaseRepository
      */
-    private $repository;
+    private BaseRepository $repository;
 
     /**
      * QueryBuilder constructor.
@@ -34,9 +39,9 @@ class QueryBuilder
     public function __construct(BaseRepository $repository)
     {
         // Set some default values.
-        $this->where = [];
-        $this->order_by;
-        $this->limit;
+        $this->where = null;
+        $this->order_by = [];
+        $this->limit = '';
 
         // And store the sent repository.
         $this->repository = $repository;
@@ -45,23 +50,24 @@ class QueryBuilder
     /**
      * Add a WHERE clause to the query.
      *
-     * @param $property
+     * @param string $property
      * @param $value
-     * @param $operator
+     * @param string $comparison
+     * @param string $operator
      *
      * @return $this
      * @throws InvalidOperatorException
      * @throws PropertyDoesNotExistException
      */
-    public function where($property, $value, $operator)
+    public function where(string $property, $value, string $comparison = '=', string $operator = 'AND')
     {
         // Check the property exists.
-        if (!in_array($property, $this->repository->getObjectProperties()) && $property != 'ID') {
+        if (!in_array($property, $this->repository->getObjectProperties())) {
             throw new PropertyDoesNotExistException($property, $this->repository->getObjectClass());
         }
 
         // Check the operator is valid.
-        if (!in_array($operator, [
+        if (!in_array($comparison, [
             '<',
             '<=',
             '=',
@@ -69,20 +75,22 @@ class QueryBuilder
             '>',
             '>=',
             'IN',
-            'NOT IN'
+            'NOT IN',
+            'LIKE',
+            'NOT LIKE',
+            'IS NULL',
+            'NOT NULL',
         ])
         ) {
-            throw new InvalidOperatorException($operator);
+            throw new InvalidOperatorException($comparison);
         }
-
-        // Add the entry.
-        $this->where[] = [
-            'property' => $property,
-            'operator' => $operator,
-            'value' => $value,
-            'placeholder' => $this->repository->getObjectPropertyPlaceholders()[$property]
-        ];
-
+        
+        if($this->where === null){
+            $this->where = new Where($this);
+        }
+        
+        $this->where->addCondition($property, $value, $comparison, $operator);
+        
         return $this;
     }
 
@@ -113,8 +121,7 @@ class QueryBuilder
         }
 
         // Save it
-        $this->order_by = "ORDER BY " . $property . " " . $operator . "
-    ";
+        $this->order_by[] = $property . " " . $operator . " ";
 
         return $this;
     }
@@ -150,55 +157,22 @@ class QueryBuilder
     {
         $values = [];
 
-        $sql = "SELECT * FROM " . Mapper::instance($this->repository->getObjectClass())->getTableName() . " ";
+        $this->query = "SELECT * FROM " . Mapper::instance($this->repository->getObjectClass())->getTableName() . " ";
 
         // Combine the WHERE clauses and add to the SQL statement.
-        if (count($this->where)) {
-            $sql .= "WHERE
-      ";
-
-            $combined_where = [];
-            foreach ($this->where as $where) {
-                // Operators is not "IN" or "NOT IN"
-                if ($where['operator'] != 'IN' && $where['operator'] != 'NOT IN') {
-                    $combined_where[] = $where['property'] . " " . $where['operator'] . " " . $where['placeholder'] . "
-          ";
-                    $values[] = $where['value'];
-                } // Operator is "IN" or "NOT IN"
-                else {
-                    // Fail silently.
-                    if (is_array($where['value'])) {
-                        $combined_where[] = $where['property'] . " " . $where['operator'] . " (" . implode(
-                                ", ",
-                                array_pad(
-                                    [],
-                                    count(
-                                        $where['value']
-                                    ),
-                                    $where['placeholder']
-                                )
-                            ) . ")
-          ";
-
-                        $values = array_merge($values, $where['value']);
-                    }
-                }
-            }
-
-            $sql .= implode(' AND ', $combined_where);  // @todo - should allow more than AND in future.
+        if($this->where !== null){
+            $this->query .= 'WHERE '.$this->where->build() . PHP_EOL;    
         }
 
         // Add the ORDER BY clause.
         if ($this->order_by) {
-            $sql .= $this->order_by;
+            $this->query .= "ORDER BY ". implode(', ', $this->order_by);
         }
 
         // Add the LIMIT clause.
         if ($this->limit) {
-            $sql .= $this->limit;
+            $this->query .= $this->limit;
         }
-        
-        $this->result = Manager::instance()->getAdapter()->fetch($sql, $values);
         
         return $this;
     }
@@ -206,6 +180,8 @@ class QueryBuilder
     
     public function getRawResult(): array
     {
+        $this->result = Manager::instance()->getAdapter()->fetch($this->query, $this->whereValues);
+        
         return $this->result;
     }
     
@@ -217,8 +193,10 @@ class QueryBuilder
      * @return array|bool|mixed
      * @throws NoQueryException
      */
-    public function getResults($always_array = false)
+    public function getResult($always_array = false)
     {
+        $this->result = Manager::instance()->getAdapter()->fetch($this->query, $this->whereValues);
+        
         if ($this->result) {
             // Classname for this repository.
             $object_classname = $this->repository->getObjectClass();
@@ -253,8 +231,51 @@ class QueryBuilder
 
             // Otherwise, the return an array of objects.
             return $objects;
-        } else {
-            throw new NoQueryException();
+        } 
+        
+        return [];
+    }
+    
+
+    /**
+     * @return Where|null
+     */
+    public function getWhere(): ?Where
+    {
+        if($this->where == null){
+            $this->where = new Where($this);
         }
+
+        return $this->where;
+        
+    }
+
+    /**
+     * @return BaseRepository
+     */
+    public function getRepository(): BaseRepository
+    {
+        return $this->repository;
+    }
+
+    public function addWhereValue($value)
+    {
+        $this->whereValues[] = $value;
+    }
+
+    /**
+     * @return string
+     */
+    public function getQuery(): string
+    {
+        return $this->query;
+    }
+
+    /**
+     * @return array
+     */
+    public function getWhereValues(): array
+    {
+        return $this->whereValues;
     }
 }

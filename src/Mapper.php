@@ -143,6 +143,14 @@ class Mapper
     }
 
     /**
+     * @return string[]
+     */
+    public function getColumnNames(): array
+    {
+        return array_keys($this->columns);
+    }
+    
+    /**
      * @return array
      */
     public function getPrimaryKeys(): array
