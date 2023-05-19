@@ -209,8 +209,14 @@ class QueryBuilder
 
                 // Fill in all the properties.
                 array_walk($result, function ($value, $property) use (&$object) {
-                    $object->set($property, $value);
+                    // if query has custom columns ignore them
+                    if(property_exists($object, $property)){
+                        $object->set($property, $value);    
+                    }
                 });
+                
+                // execute model custom initialize action after load from database
+                $object->initialize();
 
                 // Track the object.
                 $em = Manager::instance();

@@ -2,6 +2,7 @@
 
 namespace NiceModules\Tests\ORM\Models;
 
+use Cassandra\Map;
 use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
 use NiceModules\ORM\Manager;
 use NiceModules\ORM\Mapper;
@@ -65,9 +66,7 @@ class BaseModelTest extends TestCase
     public function testGetPlaceholders()
     {
         $foo = new Foo();
-
         $foo->set('ID', 100);
-
         $this->assertEquals(Mapper::instance(Foo::class)->getPlaceholders(), $foo->getPlaceholders());
     }
 
@@ -114,9 +113,12 @@ class BaseModelTest extends TestCase
         $orm->flush();
 
         // query db for object
+        /** @var Foo $fooFromDb */
         $fooFromDb = $orm->getRepository(Foo::class)->find($foo->getId());
         
         $this->assertEquals($bar->getId(), $fooFromDb->getObjectRelatedBy('bar_ID')->getId());
+        $orm->clean($fooFromDb);
+        Mapper::instance(Foo::class)->dropTable();
     }
 
     public function testGetAllUnkeyedValues()

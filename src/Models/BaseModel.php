@@ -71,6 +71,7 @@ abstract class BaseModel
         if (!isset($this->ID) || (isset($this->ID) && empty($this->ID))) {
             return false;
         }
+        
         return true;
     }
 
@@ -186,7 +187,7 @@ abstract class BaseModel
      *
      * @param $property
      *
-     * @return mixed
+     * @return Object|null
      * @throws PropertyDoesNotExistException
      * @throws ReflectionException
      * @throws RepositoryClassNotDefinedException
@@ -221,7 +222,7 @@ abstract class BaseModel
         return null;
     }
 
-    public function setObjectRelatedBy($property, $object)
+    final public function setObjectRelatedBy($property, $object)
     {
         if (!property_exists($this, $property)) {
             throw new PropertyDoesNotExistException($property, get_called_class());
@@ -313,4 +314,21 @@ abstract class BaseModel
 
         return true;
     }
+
+    /**
+     *  This function is executed right before write object to database
+     *  Use for override
+     */
+    public function executeBeforeSave(){
+        
+    }
+
+    /**
+     *  This function is executed right after load object from database
+     *  Use for override
+     */
+    public function initialize(){
+            
+    } 
+    
 }

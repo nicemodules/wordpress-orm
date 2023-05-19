@@ -50,4 +50,13 @@ class Foo extends BaseModel
      */
     protected string $name = '';
     
+    public function executeBeforeSave()
+    {
+        parent::executeBeforeSave();
+        
+        if(!$this->hasId()){ // is object new?
+            $this->date_add = date('Y-m-d H:i:s');
+        }
+    }
+
 }

@@ -31,12 +31,20 @@ class ManagerTest extends TestCase
     {
         Mapper::instance(Bar::class)->updateSchema();
         Mapper::instance(Foo::class)->updateSchema();
+
+        $bars = Manager::instance()->getRepository(Bar::class)->findAll();
         
-        $unique = uniqid('u', true);
+        foreach ($bars as $bar){
+            Manager::instance()->remove($bar);
+        }
+
+        Manager::instance()->flush();
+        
+        $unique = uniqid('B', true);
         $number = 10;
 
         $bars = [];
-        for ($i = 1; $i < $number; $i++) {
+        for ($i = 0; $i < $number; $i++) {
             $bar = new Bar();
             $bar->set('name', $unique . '-' . $i);
             $bars[] = $bar;

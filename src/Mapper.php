@@ -306,7 +306,7 @@ class Mapper
                 // Register annotation 
                 $this->columns[$property->name] = $column;
                 
-                if($column->allowUpdate){
+                if($column->allow_update){
                     $this->updateColumns[$property->name] = $column;
                 }
                 
@@ -316,7 +316,7 @@ class Mapper
 
                 $this->addSchemaString($property, $column);
                 
-                if($column->allowUpdate) {
+                if($column->allow_update) {
                     $this->addPlaceholder($property, $column);
                 }
             }
@@ -324,6 +324,7 @@ class Mapper
 
         $this->sort($this->schemas);
         $this->sort($this->columns);
+        $this->sort($this->updateColumns);
         $this->sort($this->placeholders);
     }
 

@@ -16,7 +16,7 @@ class Column
     public bool $auto_increment;
     public string $default;
     public ManyToOne $many_to_one;
-    public bool $allowUpdate = true;
+    public bool $allow_update = true;
 
 
     public function __construct(array $values)
@@ -26,7 +26,7 @@ class Column
         }
         
         if($this->type === 'timestamp'){
-            $this->allowUpdate = false;
+            $this->allow_update = false;
         }
     }
 }
