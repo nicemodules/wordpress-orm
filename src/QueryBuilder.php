@@ -147,7 +147,7 @@ class QueryBuilder
     }
 
     /**
-     * Build the query and process through $wpdb->prepare().
+     * Build the query and process using adapter prepare.
      * @return $this
      * @throws Exceptions\RepositoryClassNotDefinedException
      * @throws Exceptions\RequiredAnnotationMissingException

@@ -24,23 +24,45 @@ class ManagerTest extends TestCase
         $this->assertInstanceOf(FooRepository::class, $repo);
     }
 
+    /**
+     * 
+     */
     public function testPersist()
     {
         Mapper::instance(Bar::class)->updateSchema();
+        Mapper::instance(Foo::class)->updateSchema();
+        
         $unique = uniqid('u', true);
         $number = 10;
 
-        for ($i = 0; $i < $number; $i++) {
+        $bars = [];
+        for ($i = 1; $i < $number; $i++) {
             $bar = new Bar();
             $bar->set('name', $unique . '-' . $i);
+            $bars[] = $bar;
             Manager::instance()->persist($bar);
         }
+
+        Manager::instance()->flush();
+        
+        /** @var Bar $bars */
+        foreach ($bars as $bar){
+            $foo = new Foo();
+            $foo->set('name', 'FOO BAR '.$bar->get('name'));
+            $foo->set('bar_ID', $bar->getId());
+            Manager::instance()->persist($foo);
+        }
+
         Manager::instance()->flush();
 
         $barsRepository = Manager::instance()->getRepository(Bar::class);
         $bars = $barsRepository->findAll();
 
+        /** @var Foo[] $foos */
+        $foos = Manager::instance()->getRepository(Foo::class)->findAll();
+        
         $this->assertEquals($number, count($bars));
+        $this->assertEquals($number, count($foos));
     }
 
     public function testRemove()
@@ -56,8 +78,10 @@ class ManagerTest extends TestCase
 
         $barsRepository = Manager::instance()->getRepository(Bar::class);
         $bars = $barsRepository->findAll();
-
+        $foos = Manager::instance()->getRepository(Foo::class)->findAll();
+        
         $this->assertEquals(0, count($bars));
+        $this->assertEquals(0, count($foos));
     }
 
     public function testTrack()

@@ -4,6 +4,7 @@ namespace NiceModules\ORM;
 
 use Doctrine\Common\Annotations\AnnotationReader;
 use NiceModules\ORM\Annotations\Column;
+use NiceModules\ORM\Annotations\ManyToOne;
 use NiceModules\ORM\Annotations\Table;
 use NiceModules\ORM\Exceptions\AllowDropIsFalseException;
 use NiceModules\ORM\Exceptions\AllowSchemaUpdateIsFalseException;
@@ -31,12 +32,22 @@ class Mapper
     private string $class;
     private Table $table;
     /**
+     * All defined columns
      * @var Column[]
      */
     private array $columns = [];
+
+    /**
+     * Columns that are allowed to insert or update
+     * @var Column[]
+     */
+    private array $updateColumns = [];
     private array $schemas = [];
     private array $placeholders = [];
     private array $primaryKeys = [];
+    /**
+     * @var ManyToOne[]
+     */
     private array $foreignKeys = [];
     private bool $validated = true;
 
@@ -70,9 +81,7 @@ class Mapper
      */
     public function getPrefix(): ?string
     {
-        global $wpdb;
-
-        $prefix = $wpdb->prefix;
+        $prefix = Manager::instance()->getAdapter()->getPrefix();
 
         if (isset($this->table->prefix)) {
             $prefix .= $this->table->prefix . '_';
@@ -103,6 +112,19 @@ class Mapper
     public function getPlaceholders(): array
     {
         return $this->placeholders;
+    }
+
+    /**
+     * @param $property
+     * @return ?string
+     */
+    public function getPlaceholder($property): ?string
+    {
+        if (isset($this->placeholders[$property])) {
+            return  $this->placeholders[$property];
+        }
+
+        return null;
     }
 
     /**
@@ -184,8 +206,6 @@ class Mapper
      */
     public function dropTable()
     {
-        global $wpdb;
-
         // Are we allowed to update the schema of this model in the db?
         if (!$this->table->allow_schema_update) {
             throw new AllowSchemaUpdateIsFalseException($this->class);
@@ -198,7 +218,15 @@ class Mapper
 
         // Drop the table.
         $sql = "DROP TABLE IF EXISTS " . $this->getPrefix() . $this->table->name;
-        $wpdb->query($sql);
+        Manager::instance()->getAdapter()->execute($sql);
+    }
+    
+    /**
+     * @return Column[]
+     */
+    public function getUpdateColumns(): array
+    {
+        return $this->updateColumns;
     }
 
     /**
@@ -252,6 +280,7 @@ class Mapper
      *
      * @return void
      * @throws IncompleteIndexException
+     * @throws IncompleteManyToOneException
      * @throws ReflectionException
      * @throws RepositoryClassNotDefinedException
      * @throws RequiredAnnotationMissingException
@@ -276,13 +305,20 @@ class Mapper
             if (isset($column->type)) {
                 // Register annotation 
                 $this->columns[$property->name] = $column;
-
+                
+                if($column->allowUpdate){
+                    $this->updateColumns[$property->name] = $column;
+                }
+                
                 if (isset($column->primary)) {
                     $this->primaryKeys[] = $property->name;
                 }
 
                 $this->addSchemaString($property, $column);
-                $this->addPlaceholder($property, $column);
+                
+                if($column->allowUpdate) {
+                    $this->addPlaceholder($property, $column);
+                }
             }
         }
 
@@ -333,7 +369,7 @@ class Mapper
         }
 
         if (isset($column->default)) {
-            $schema_string .= ' DEFAULT' . $column->default;
+            $schema_string .= ' DEFAULT ' . $column->default;
         }
 
         if ((isset($column->primary) && $column->primary) || (isset($column->auto_incremet) && $column->auto_incremet)) {

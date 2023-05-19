@@ -89,7 +89,7 @@ class MapperTest extends TestCase
         $result = $wpdb->get_results('SHOW CREATE TABLE ' . $mapper->getTableName());
         $this->assertNotFalse($result);
 
-        print_r(PHP_EOL);
+        print_r(PHP_EOL . 'SHOW CREATE TABLE query result:' . PHP_EOL);
         print_r($result);
         print_r(PHP_EOL);
     }

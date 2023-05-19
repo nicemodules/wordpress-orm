@@ -2,8 +2,11 @@
 
 namespace NiceModules\Tests\ORM\Models;
 
+use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
+use NiceModules\ORM\Manager;
 use NiceModules\ORM\Mapper;
 use NiceModules\ORM\Models\BaseModel;
+use NiceModules\ORM\Models\Test\Bar;
 use NiceModules\ORM\Models\Test\Foo;
 use PHPUnit\Framework\TestCase;
 
@@ -86,11 +89,34 @@ class BaseModelTest extends TestCase
         $this->assertEquals($values, $result);
     }
 
-    public function testGetRaw()
+
+    /**
+     * @covers NiceModules\ORM\Models\BaseModel::setObjectRelatedBy
+     */
+    public function testGetObjectRelatedBy()
     {
+        // create bar table if not exsist
+        Mapper::instance(Bar::class)->updateSchema();
+        Mapper::instance(Foo::class)->updateSchema();
+        
+        $orm = Manager::instance();
+        
+        $bar = new Bar();
+        $bar->set('name', 'Foo bar');
+        $orm->persist($bar);
+
+        $orm->flush();
+        
         $foo = new Foo();
-        $foo->set('bar_ID', 1);
-        $this->assertEquals(1, $foo->getRaw('bar_ID'));
+        $foo->setObjectRelatedBy('bar_ID', $bar);
+        $orm->persist($foo);
+
+        $orm->flush();
+
+        // query db for object
+        $fooFromDb = $orm->getRepository(Foo::class)->find($foo->getId());
+        
+        $this->assertEquals($bar->getId(), $fooFromDb->getObjectRelatedBy('bar_ID')->getId());
     }
 
     public function testGetAllUnkeyedValues()

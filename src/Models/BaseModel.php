@@ -4,6 +4,8 @@ namespace NiceModules\ORM\Models;
 
 use NiceModules\ORM\Annotations\Column;
 use NiceModules\ORM\Annotations\Table;
+use NiceModules\ORM\Exceptions\InvalidOperatorException;
+use NiceModules\ORM\Exceptions\NoQueryException;
 use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
 use NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException;
 use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
@@ -23,6 +25,8 @@ abstract class BaseModel
     protected ?int $ID;
 
     protected string $hash;
+
+    protected array $relatedObjects;
 
     /**
      * BaseModel constructor.
@@ -46,7 +50,7 @@ abstract class BaseModel
             if ($property == 'ID') {
                 continue;
             }
-            $object->set($property, $this->getRaw($property));
+            $object->set($property, $this->get($property));
         }
     }
 
@@ -88,6 +92,9 @@ abstract class BaseModel
     }
 
     /**
+     * getColumns and getPlaceholders are key functions for updating/inserting model DB records, 
+     * used in the TrackedCollection collection class. 
+    *
      * @return Column[]
      * @throws ReflectionException
      * @throws RepositoryClassNotDefinedException
@@ -96,7 +103,7 @@ abstract class BaseModel
      */
     public function getColumns(): array
     {
-        $columns = Mapper::instance(get_called_class())->getColumns();
+        $columns = Mapper::instance(get_called_class())->getUpdateColumns();
 
         if (!$this->hasId()) {
             unset($columns['ID']);
@@ -106,18 +113,9 @@ abstract class BaseModel
     }
 
     /**
-     * @return array
-     * @throws ReflectionException
-     * @throws RepositoryClassNotDefinedException
-     * @throws RequiredAnnotationMissingException
-     * @throws UnknownColumnTypeException
-     */
-    public function getColumnNames(): array
-    {
-        return array_keys($this->getColumns());
-    }
-
-    /**
+     * getColumns and getPlaceholders are key functions for updating/inserting model DB records, 
+     * used in the TrackedCollection collection class.
+     * 
      * @return mixed
      * @throws ReflectionException
      * @throws RepositoryClassNotDefinedException
@@ -134,6 +132,19 @@ abstract class BaseModel
 
         return $placeholders;
     }
+    
+    /**
+     * @return array
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
+     */
+    public function getColumnNames(): array
+    {
+        return array_keys($this->getColumns());
+    }
+    
 
     /**
      * Return keyed values from this object as per the schema.
@@ -176,14 +187,58 @@ abstract class BaseModel
      * @param $property
      *
      * @return mixed
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
+     * @throws InvalidOperatorException
+     * @throws NoQueryException
      */
-    final public function getRaw($property)
+    final public function getObjectRelatedBy($property)
     {
-        if (isset($this->$property)) {
-            return $this->$property;
+        if (isset($this->relatedObjects[$property])) {
+            return $this->relatedObjects[$property];
+        }
+
+        $column = Mapper::instance(get_called_class())->getColumn($property);
+
+        // If this property is a ManyToOne, check to see if it's an object and lazy
+        // load it if not.
+        if (isset($column->many_to_one)) {
+            $foreignKey = $this->get($property);
+
+            $orm = Manager::instance();
+            $object_repository = $orm->getRepository($column->many_to_one->modelName);
+            $object = $object_repository->findBy([$column->many_to_one->propertyName => $foreignKey]);
+
+            if ($object) {
+                $this->relatedObjects[$property] = $object;
+                return $object;
+            }
         }
 
         return null;
+    }
+
+    public function setObjectRelatedBy($property, $object)
+    {
+        if (!property_exists($this, $property)) {
+            throw new PropertyDoesNotExistException($property, get_called_class());
+        }
+        
+        $column = Mapper::instance(get_called_class())->getColumn($property);
+
+        if (!isset($column->many_to_one)){
+            throw new NotManyToOnePropertyException($property);
+        } 
+        
+        if(!$object instanceof $column->many_to_one->modelName) {
+            throw new NotInstanceOfClassException($column->many_to_one->modelName);
+        }
+
+        $this->relatedObjects[$property] = $object;
+        $this->$property = $object->getId();
     }
 
     /**
@@ -203,21 +258,6 @@ abstract class BaseModel
         // Check to see if the property exists on the model.
         if (!property_exists($this, $property)) {
             throw new PropertyDoesNotExistException($property, get_called_class());
-        }
-
-        // If this property is a ManyToOne, check to see if it's an object and lazy
-        // load it if not.
-        $column = Mapper::instance(get_called_class())->getColumn($property);
-
-        if (isset($column->many_to_one) && isset($this->$property) && !is_object($this->$property)) {
-            // Lazy load.
-            $orm = Manager::getManager();
-            $object_repository = $orm->getRepository($column->many_to_one->modelName);
-            $object = $object_repository->findBy([$column->many_to_one->propertyName => $this->$property]);
-
-            if ($object) {
-                $this->$property = $object;
-            }
         }
 
         // Return the value of the field.

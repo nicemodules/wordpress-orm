@@ -15,12 +15,14 @@ class QueryBuilderTest extends TestCase
         $number = 10;
 
         $bars = [];
-        for ($i = 0; $i < $number; $i++) {
+        
+        for ($i = 1; $i < $number; $i++) {
             $bar = new Bar();
             $bar->set('name', $unique . '-' . $i);
             $bars[] = $bar;
             Manager::instance()->persist($bar);
         }
+        
         Manager::instance()->flush();
 
         $queryBuilder = Manager::instance()

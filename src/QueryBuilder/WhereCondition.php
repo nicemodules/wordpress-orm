@@ -57,9 +57,7 @@ class WhereCondition
     protected function getValue(string $property, $value): string
     {
         $this->queryBuilder->addWhereValue($value);
-        $placeholders = $this->queryBuilder->getRepository()->getMapper()->getPlaceholders();
-
-        return $placeholders[$property];
+        return $this->queryBuilder->getRepository()->getMapper()->getPlaceholder($property);
     }
 
 }

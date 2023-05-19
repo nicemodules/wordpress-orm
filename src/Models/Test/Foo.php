@@ -18,37 +18,36 @@ use NiceModules\ORM\Models\BaseModel;
  *     prefix="prefix",
  *     indexes={@Index(name="name_index", columns={"name"})},
  *     repository="NiceModules\ORM\Repositories\Test\FooRepository",
- *     inherits="NiceModules\ORM\Models\BaseModel"
+ *     column_order={"ID", "date_add", "date_update"},
+ *     inherits="NiceModules\ORM\Models\BaseModel",
  *     )
  */
 class Foo extends BaseModel
 {
     /**
-     * @Column(type="datetime", null ="NOT NULL")
+     * @Column(type="datetime", null ="NULL")
      */
     protected string $date_add = '';
 
     /**
-     * @Column(type="timestamp", null="NOT NULL")
+     * @Column(type="timestamp", null="NULL", default="CURRENT_TIMESTAMP")
      */
     protected string $date_update = '';
 
+    /**
+     * @Column(
+     *     type="int",
+     *     length="10",
+     *     null="NOT NULL",
+     *     many_to_one=@ManyToOne(modelName="NiceModules\ORM\Models\Test\Bar", propertyName="ID", onDelete="CASCADE")
+     *     )
+     */
+    protected $bar_ID;
+    
     /**
      * @Column(type="varchar", length="25")
      * @var string
      */
     protected string $name = '';
-
-    /**
-     * @Column(
-     *     type="bigint",
-     *     length="20",
-     *     null="NOT NULL",
-     *     type="bigint",
-     *     length="20",
-     *     many_to_one=@ManyToOne(modelName="NiceModules\ORM\Models\Test\Bar", propertyName="ID")
-     *     )
-     */
-    protected ?int $bar_ID;
-
+    
 }

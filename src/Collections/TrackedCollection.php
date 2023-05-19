@@ -7,6 +7,7 @@ use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
 use NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException;
 use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
 use NiceModules\ORM\Exceptions\UnknownColumnTypeException;
+use NiceModules\ORM\Logger;
 use NiceModules\ORM\Models\BaseModel;
 use ReflectionException;
 
@@ -77,17 +78,10 @@ class TrackedCollection implements ArrayAccess
             // Now add the placeholder and row data.
             $data[$modelClass]['placeholders_count'] += 1;
 
-            if ($iterator === 'getPersistedObjects') {
-                $data[$modelClass]['values'] = array_merge(
-                    $data[$modelClass]['values'],
-                    $model->getAllUnkeyedValues()
-                );
-            } else {
-                $data[$modelClass]['values'] = array_merge(
-                    $data[$modelClass]['values'],
-                    $model->getAllUnkeyedValues()
-                );
-            }
+            $data[$modelClass]['values'] = array_merge(
+                $data[$modelClass]['values'],
+                $model->getAllUnkeyedValues()
+            );
         }
 
         return $data;
@@ -125,6 +119,8 @@ class TrackedCollection implements ArrayAccess
         switch ($state) {
             // If new, objects will have a 'model' but no 'last_state',
             case self::_OBJECT_NEW:
+                Logger::instance()->log('Tracking _OBJECT_NEW: ', 1);
+                Logger::instance()->log($object);
                 $this->list[$object->getHash()] = [
                     'model' => $object,
                 ];
@@ -132,6 +128,8 @@ class TrackedCollection implements ArrayAccess
 
             // If new, objects will have both a 'model' and a 'last_state',
             case self::_OBJECT_TRACKED:
+                Logger::instance()->log('Tracking _OBJECT_TRACKED: ', 1);
+                Logger::instance()->log($object);
                 $this->list[$object->getHash()] = [
                     'model' => $object,
                     'last_state' => clone $object
@@ -140,6 +138,8 @@ class TrackedCollection implements ArrayAccess
 
             // Clean an object out of the $list
             case self::_OBJECT_CLEAN:
+                Logger::instance()->log('Untrackig _OBJECT_CLEAN: ', 1);
+                Logger::instance()->log($object);
                 unset($this->list[$object->getHash()]);
                 break;
         }

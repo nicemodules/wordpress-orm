@@ -81,15 +81,7 @@ class BaseRepository
     {
         return $this->mapper->getColumnNames();
     }
-
-    /**
-     * Getter used in the query builder.
-     * @return array
-     */
-    public function getObjectPropertyPlaceholders()
-    {
-        return $this->mapper->getPlaceholders();
-    }
+    
 
     /**
      * Find a single object by ID.
