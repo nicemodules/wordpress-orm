@@ -25,8 +25,6 @@ class WpDbAdapter implements DatabaseAdapter
      */
     public function execute(string $query, array $values = [])
     {
-        
-        
         if ($values) {
             $query = $this->wpdb->prepare($query, $values);
         }
@@ -44,7 +42,7 @@ class WpDbAdapter implements DatabaseAdapter
         if ($values) {
             $query = $this->wpdb->prepare($query, $values);
         }
-        
+
         Logger::instance()->log($query, true);
         return $this->wpdb->get_results($query);
     }
@@ -95,10 +93,10 @@ class WpDbAdapter implements DatabaseAdapter
         if (isset($mapper->getTable()->indexes)) {
             $indexes = [];
             foreach ($mapper->getTable()->indexes as $index) {
-                $indexes[] = ', ' . PHP_EOL . 'INDEX ' . $index->name . ' (' . implode(',', $index->columns) . ')';
+                $indexes[] = 'INDEX ' . $index->name . ' (' . implode(',', $index->columns) . ')';
             }
 
-            $indexesSql = implode(', ' . PHP_EOL, $indexes);
+            $indexesSql = ', ' . PHP_EOL  . implode(', ' . PHP_EOL, $indexes);
         }
 
         $sql = "CREATE TABLE " . $mapper->getTableName() . " (" .
@@ -106,7 +104,8 @@ class WpDbAdapter implements DatabaseAdapter
             $primaryKeysSql .
             $indexesSql . PHP_EOL .
             ")" . PHP_EOL . $charset_collate . ';';
-
+        
+        Logger::instance()->log('DbDeltaSql: ' . $sql);
 
         // Use dbDelta to do all the hard work.
         // Note that dbDelta doesn't support foreign key's and require specific format of sql query (spaces and new lines)

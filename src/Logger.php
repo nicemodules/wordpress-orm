@@ -60,9 +60,9 @@ class Logger extends Singleton
     }
 
     /**
-     * @return array
+     * @return string
      */
-    public function getLogString(): array
+    public function getLogString(): string
     {
         return implode(PHP_EOL, $this->log);
     }
