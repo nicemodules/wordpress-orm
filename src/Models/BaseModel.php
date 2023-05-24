@@ -102,7 +102,7 @@ abstract class BaseModel
      * @throws RequiredAnnotationMissingException
      * @throws UnknownColumnTypeException
      */
-    public function getColumns(): array
+    public function getUpdateColumns(): array
     {
         $columns = Mapper::instance(get_called_class())->getUpdateColumns();
 
@@ -113,11 +113,16 @@ abstract class BaseModel
         return $columns;
     }
 
+    public function getColumns(): array
+    {
+        return Mapper::instance(get_called_class())->getColumns();
+    }
+
     /**
      * getColumns and getPlaceholders are key functions for updating/inserting model DB records, 
-     * used in the TrackedCollection collection class.
+     * used in the TrackedCollection to retrieve query placeholders.
      * 
-     * @return mixed
+     * @return array
      * @throws ReflectionException
      * @throws RepositoryClassNotDefinedException
      * @throws RequiredAnnotationMissingException
@@ -143,7 +148,7 @@ abstract class BaseModel
      */
     public function getColumnNames(): array
     {
-        return array_keys($this->getColumns());
+        return array_keys($this->getUpdateColumns());
     }
     
 
@@ -166,7 +171,8 @@ abstract class BaseModel
     }
 
     /**
-     * Return unkeyed values from this object as per the schema (no ID).
+     * Return unkeyed values from this object as per the schema, 
+     * used in the TrackedCollection to retrieve query values 
      * @return array
      * @throws PropertyDoesNotExistException
      * @throws ReflectionException
@@ -174,11 +180,11 @@ abstract class BaseModel
      * @throws RequiredAnnotationMissingException
      * @throws UnknownColumnTypeException
      */
-    public function getAllUnkeyedValues(): array
+    public function getAllUpdateValues(): array
     {
         return array_map(function ($key) {
             return $this->get($key);
-        }, array_keys($this->getColumns()));
+        }, array_keys($this->getUpdateColumns()));
     }
 
     /**
@@ -211,7 +217,7 @@ abstract class BaseModel
 
             $orm = Manager::instance();
             $object_repository = $orm->getRepository($column->many_to_one->modelName);
-            $object = $object_repository->findBy([$column->many_to_one->propertyName => $foreignKey]);
+            $object = $object_repository->findSingle([$column->many_to_one->propertyName => $foreignKey]);
 
             if ($object) {
                 $this->relatedObjects[$property] = $object;

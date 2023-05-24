@@ -83,7 +83,7 @@ class TrackedCollection implements ArrayAccess
 
             $data[$modelClass]['values'] = array_merge(
                 $data[$modelClass]['values'],
-                $model->getAllUnkeyedValues()
+                $model->getAllUpdateValues()
             );
         }
 

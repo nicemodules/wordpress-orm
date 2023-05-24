@@ -3,8 +3,8 @@
 namespace NiceModules\ORM;
 
 use NiceModules\ORM\Exceptions\InvalidOperatorException;
-use NiceModules\ORM\Exceptions\NoQueryException;
 use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
+use NiceModules\ORM\Models\BaseModel;
 use NiceModules\ORM\QueryBuilder\Where;
 use NiceModules\ORM\Repositories\BaseRepository;
 use ReflectionException;
@@ -22,11 +22,13 @@ class QueryBuilder
 
     private string $limit;
 
+    private ?array $rawResult = null;
+
     /**
      * The query result.
-     * @var array
+     * @var BaseModel[]|null
      */
-    private array $result;
+    private ?array $result = null;
 
     /**
      * Reference to the repository.
@@ -181,68 +183,117 @@ class QueryBuilder
 
     public function getRawResult(): array
     {
-        $this->result = Manager::instance()->getAdapter()->fetch($this->query, $this->whereValues);
+        if ($this->rawResult === null) {
+            if ($result = Manager::instance()->getAdapter()->fetch($this->query, $this->whereValues)) {
+                $this->rawResult = $result;
+            } else {
+                $this->rawResult = [];
+            }
+        }
+
+        return $this->rawResult;
+    }
+
+    /**
+     * Get an array of model objects.
+     *
+     * @return BaseModel[]
+     */
+    public function getResult(): array
+    {
+        $objectClassname = $this->repository->getObjectClass();
+        $this->result = [];
+
+        foreach ($this->getRawResult() as $row) {
+            $object = new $objectClassname();
+
+            array_walk($row, function ($value, $property) use (&$object) {
+                // if query has custom columns ignore them
+                if (property_exists($object, $property)) {
+                    $object->set($property, $value);
+                }
+            });
+
+            $object->initialize();
+            Manager::instance()->track($object);
+            $this->result[] = $object;
+        }
 
         return $this->result;
     }
 
     /**
-     * Run the query returning either a single object or an array of objects.
-     *
-     * @param bool $always_array
-     *
-     * @return array|bool|mixed
-     * @throws NoQueryException
+     * @return BaseModel|null
      */
-    public function getResult($always_array = false)
+    public function getSingleResult(): ?BaseModel
     {
-        $this->result = Manager::instance()->getAdapter()->fetch($this->query, $this->whereValues);
+        $result = $this->getResult();
 
-        if ($this->result) {
-            // Classname for this repository.
-            $object_classname = $this->repository->getObjectClass();
-
-            // Loop through the database results, building the objects.
-            $objects = array_map(function ($result) use (&$object_classname) {
-                // Create a new blank object.
-                $object = new $object_classname();
-
-                // Fill in all the properties.
-                array_walk($result, function ($value, $property) use (&$object) {
-                    // if query has custom columns ignore them
-                    if(property_exists($object, $property)){
-                        $object->set($property, $value);    
-                    }
-                });
-                
-                // execute model custom initialize action after load from database
-                $object->initialize();
-
-                // Track the object.
-                $em = Manager::instance();
-                $em->track($object);
-
-                // Save it.
-                return $object;
-            }, $this->result);
-
-            // There were no results.
-            if (!count($objects)) {
-                return false;
-            }
-
-            // Return just an object if there was only one result.
-            if (count($objects) == 1 && !$always_array) {
-                return $objects[0];
-            }
-
-            // Otherwise, the return an array of objects.
-            return $objects;
+        if (isset($result[0])) {
+            return $result[0];
         }
 
-        return [];
+        return null;
     }
 
+    /**
+     * @return BaseModel|null
+     * @throws Exceptions\RepositoryClassNotDefinedException
+     * @throws Exceptions\RequiredAnnotationMissingException
+     * @throws Exceptions\UnknownColumnTypeException
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     */
+    public function getResultById(): ?BaseModel
+    {
+        $result = [];
+
+        foreach ($this->getResult() as $object){
+            $result[$object->get('ID')] = $object ;
+        }
+
+        return $result;
+    }
+
+
+    /**
+     * @return array
+     * @throws Exceptions\RepositoryClassNotDefinedException
+     * @throws Exceptions\RequiredAnnotationMissingException
+     * @throws Exceptions\UnknownColumnTypeException
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     */
+    public function getResultArray(): array
+    {
+        $result = [];
+
+        foreach ($this->getResult() as $object){
+            $result[] = $object->getAllValues() ;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array
+     * @throws Exceptions\RepositoryClassNotDefinedException
+     * @throws Exceptions\RequiredAnnotationMissingException
+     * @throws Exceptions\UnknownColumnTypeException
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     */
+    public function getResultArrayById(): array
+    {
+        $result = [];
+
+        foreach ($this->getResult() as $object){
+            $result[$object->get('ID')] = $object->getAllValues() ;
+        }
+
+        return $result;
+    }
+    
 
     /**
      * @return Where|null

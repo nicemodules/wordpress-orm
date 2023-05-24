@@ -2,7 +2,6 @@
 
 namespace NiceModules\ORM\Annotations;
 
-use Doctrine\Common\Annotations\AnnotationReader;
 
 /**
  * @Annotation

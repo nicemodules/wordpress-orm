@@ -125,7 +125,7 @@ class BaseModelTest extends TestCase
     {
         $foo = new Foo();
         $foo->set('name', 'foo');
-        $values = $foo->getAllUnkeyedValues();
+        $values = $foo->getAllUpdateValues();
 
         $this->assertEquals($values[2], 'foo');
     }
@@ -140,8 +140,8 @@ class BaseModelTest extends TestCase
     public function testGetColumns()
     {
         $foo = new Foo();
-        $this->assertIsArray($foo->getColumns());
-        $this->assertNotEmpty($foo->getColumns());
+        $this->assertIsArray($foo->getUpdateColumns());
+        $this->assertNotEmpty($foo->getUpdateColumns());
     }
 
     public function testGetHash()

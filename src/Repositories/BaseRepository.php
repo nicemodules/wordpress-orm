@@ -9,6 +9,7 @@ use NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException;
 use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
 use NiceModules\ORM\Exceptions\UnknownColumnTypeException;
 use NiceModules\ORM\Mapper;
+use NiceModules\ORM\Models\BaseModel;
 use NiceModules\ORM\QueryBuilder;
 use ReflectionException;
 
@@ -81,28 +82,40 @@ class BaseRepository
     {
         return $this->mapper->getColumnNames();
     }
-    
+
 
     /**
      * Find a single object by ID.
      *
      * @param $id
      *
-     * @return array|bool|mixed
+     * @return null|BaseModel
+     * @throws InvalidOperatorException
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
      */
-    public function find($id)
+    public function find($id): ?BaseModel
     {
         return $this->createQueryBuilder()
             ->where('ID', $id, '=')
             ->orderBy('ID', 'ASC')
             ->buildQuery()
-            ->getResult();
+            ->getSingleResult();
     }
 
     /**
      * Return all objects of this type.
      *
-     * @return array|bool|mixed
+     * @return array
+     * @throws InvalidOperatorException
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
      */
     public function findAll()
     {
@@ -118,15 +131,14 @@ class BaseRepository
      * @param array $criteria
      *
      * @return array
+     * @throws InvalidOperatorException
+     * @throws PropertyDoesNotExistException
      * @throws ReflectionException
      * @throws RepositoryClassNotDefinedException
      * @throws RequiredAnnotationMissingException
      * @throws UnknownColumnTypeException
-     * @throws InvalidOperatorException
-     * @throws NoQueryException
-     * @throws PropertyDoesNotExistException
      */
-    public function findBy(array $criteria)
+    public function findBy(array $criteria): array
     {
         $qb = $this->createQueryBuilder();
         foreach ($criteria as $property => $value) {
@@ -137,6 +149,27 @@ class BaseRepository
             ->getResult();
     }
 
+    /**
+     * @param array $criteria
+     * @return BaseModel|null
+     * @throws InvalidOperatorException
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
+     */
+    public function findSingle(array $criteria): ?BaseModel
+    {
+        $qb = $this->createQueryBuilder();
+        foreach ($criteria as $property => $value) {
+            $qb->where($property, $value, '=');
+        }
+        return $qb->orderBy('ID', 'ASC')
+            ->buildQuery()
+            ->getSingleResult();
+    }
+    
     /**
      * @return Mapper
      */

@@ -103,7 +103,7 @@ class ManagerTest extends TestCase
             ->getRepository(Bar::class)
             ->createQueryBuilder()->where('name', 'foobar')
             ->buildQuery()
-            ->getResult();
+            ->getSingleResult();
 
         $this->assertEquals($bar->get('name'), 'foobar');
 
