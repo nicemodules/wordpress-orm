@@ -11,6 +11,8 @@ use ReflectionException;
 
 class QueryBuilder
 {
+    const ORDER_ASC = 'ASC';
+    const ORDER_DESC = 'ASC';
 
     private string $query;
 
@@ -100,14 +102,14 @@ class QueryBuilder
     /**
      * Set the ORDER BY clause.
      *
-     * @param $property
-     * @param $operator
+     * @param string $property
+     * @param string $direction
      *
      * @return $this
      * @throws InvalidOperatorException
      * @throws PropertyDoesNotExistException
      */
-    public function orderBy($property, $operator)
+    public function orderBy(string $property, string $direction = self::ORDER_ASC)
     {
         // Check the property exists.
         if (!in_array($property, $this->repository->getObjectProperties()) && $property != 'ID') {
@@ -115,16 +117,16 @@ class QueryBuilder
         }
 
         // Check the operator is valid.
-        if (!in_array($operator, [
-            'ASC',
-            'DESC',
+        if (!in_array($direction, [
+            self::ORDER_ASC,
+            self::ORDER_DESC,
         ])
         ) {
-            throw new InvalidOperatorException($operator);
+            throw new InvalidOperatorException($direction);
         }
 
         // Save it
-        $this->order_by[] = $property . " " . $operator . " ";
+        $this->order_by[] = $property . " " . $direction . " ";
 
         return $this;
     }
@@ -132,17 +134,17 @@ class QueryBuilder
     /**
      * Set the limit clause.
      *
-     * @param $count
+     * @param int $count
      * @param int $offset
      *
      * @return $this
      */
-    public function limit($count, $offset = 0)
+    public function limit(int $count, int  $offset = 0): QueryBuilder
     {
         // Ignore if not valid.
         if (is_numeric($offset) && is_numeric($count) && $offset >= 0 && $count > 0) {
             $this->limit = "LIMIT " . $count . " OFFSET " . $offset . "
-      ";
+            ";
         }
 
         return $this;
