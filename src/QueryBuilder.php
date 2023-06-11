@@ -12,9 +12,11 @@ use ReflectionException;
 class QueryBuilder
 {
     const ORDER_ASC = 'ASC';
-    const ORDER_DESC = 'ASC';
+    const ORDER_DESC = 'DESC';
 
     private string $query;
+    
+    private string $whereQuery;
 
     private ?Where $where;
 
@@ -23,6 +25,8 @@ class QueryBuilder
     private array $order_by = [];
 
     private string $limit;
+    
+    private ?int $count = null;
 
     private ?array $rawResult = null;
 
@@ -160,14 +164,9 @@ class QueryBuilder
      */
     public function buildQuery()
     {
-        $values = [];
-
         $this->query = "SELECT * FROM " . Mapper::instance($this->repository->getObjectClass())->getTableName() . " ";
 
-        // Combine the WHERE clauses and add to the SQL statement.
-        if ($this->where !== null) {
-            $this->query .= 'WHERE ' . $this->where->build() . PHP_EOL;
-        }
+        $this->query .= $this->getWhereQuery();
 
         // Add the ORDER BY clause.
         if ($this->order_by) {
@@ -182,7 +181,32 @@ class QueryBuilder
         return $this;
     }
 
+    public function getCount(){
+        if($this->count === null){
+            $query = "SELECT COUNT(*) as number_of_rows FROM " . Mapper::instance($this->repository->getObjectClass())->getTableName() . " ";
+            
+            $query .= $this->getWhereQuery();
 
+            $this->count = Manager::instance()->getAdapter()->fetchValue($query, $this->whereValues);
+        }
+        
+        return $this->count;
+    }
+    
+    
+    private function getWhereQuery(){
+        if(!isset($this->whereQuery)){
+            // Combine the WHERE clauses and add to the SQL statement.
+            $this->whereQuery= '';
+            
+            if ($this->where !== null) {
+                $this->whereQuery .=   'WHERE ' . $this->where->build() . PHP_EOL;
+            }
+        }
+        
+        return $this->whereQuery;
+    }
+    
     public function getRawResult(): array
     {
         if ($this->rawResult === null) {

@@ -78,44 +78,56 @@ class Manager extends Singleton
      * Queue this model up to be added to the database with flush().
      *
      * @param BaseModel $object
+     * @return Manager
      */
-    public function persist(BaseModel $object)
+    public function persist(BaseModel $object): Manager
     {
         // Start tracking this object (because it is new, it will be tracked as
         // something to be INSERTed)
         $this->tracked[$object] = TrackedCollection::_OBJECT_NEW;
+        
+        return $this;
     }
 
     /**
      * Start tracking a model known to exist in the database.
      *
      * @param BaseModel $object
+     * @return Manager
      */
-    public function track(BaseModel $object)
+    public function track(BaseModel $object): Manager
     {
         // Save it against the key.
         $this->tracked[$object] = TrackedCollection::_OBJECT_TRACKED;
+        
+        return $this;
     }
 
     /**
      * This model should be removed from the db when flush() is called.
      *
-     * @param $model
+     * @param BaseModel $object
+     * @return Manager
      */
-    public function remove(BaseModel $object)
+    public function remove(BaseModel $object): Manager
     {
         unset($this->tracked[$object]);
+        
+        return $this;
     }
 
     /**
      * Start tracking a model known to exist in the database.
      *
      * @param BaseModel $object
+     * @return Manager
      */
-    public function clean(BaseModel $object)
+    public function clean(BaseModel $object): Manager
     {
         // Save it against the key.
         $this->tracked[$object] = TrackedCollection::_OBJECT_CLEAN;
+        
+        return $this;
     }
 
     /**
@@ -138,11 +150,13 @@ class Manager extends Singleton
      * @throws ReflectionException
      * @throws Throwable
      */
-    public function flush()
+    public function flush(): Manager
     {
         $this->_flush_update();
         $this->_flush_insert();
         $this->_flush_delete();
+        
+        return $this;
     }
 
     /**

@@ -50,6 +50,7 @@ abstract class BaseModel
             if ($property == 'ID') {
                 continue;
             }
+            
             $object->set($property, $this->get($property));
         }
     }

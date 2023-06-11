@@ -56,6 +56,15 @@ class WpDbAdapter implements DatabaseAdapter
         return $this->wpdb->get_row($query);
     }
 
+    public function fetchValue(string $query, array $values = [])
+    {
+        if ($values) {
+            $query = $this->wpdb->prepare($query, $values);
+        }
+
+        return $this->wpdb->get_var($query);
+    }
+
     public function escape($value)
     {
         return $this->wpdb->prepare('%s', $value);
