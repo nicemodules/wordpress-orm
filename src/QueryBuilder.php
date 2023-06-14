@@ -266,12 +266,16 @@ class QueryBuilder
 
                 $object->initialize();
                 $this->ids[] = $object->getId();
-                Manager::instance()->track($object);
                 $this->result[] = $object;
             }
 
             $this->join($joinModel, $joinIds);
             $this->joinI18n();
+        }
+        
+        
+        foreach ($this->result as $object){
+            Manager::instance()->track($object);
         }
         
         return $this->result;
