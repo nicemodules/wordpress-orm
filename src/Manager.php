@@ -288,7 +288,7 @@ class Manager extends Singleton
                     // Update using WordPress prepare() which provides SQL injection protection (apparently).
                     $count = $this->getAdapter()->execute($sql, $values['values']);
 
-                    if ($count) {
+                    if ($count !== false) {
                         foreach ($values['objects'] as $object) {
                             $this->track($object);
                         }
@@ -329,7 +329,7 @@ class Manager extends Singleton
                     $count = $this->adapter->execute($sql, $values['values']);
 
                     // Really remove the object from the tracking list.
-                    if ($count) {
+                    if ($count !== false) {
                         foreach ($values['objects'] as $object) {
                             $this->clean($object);
                         }

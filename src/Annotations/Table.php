@@ -22,6 +22,7 @@ class Table
     public string $inherits;
     public string $repository;
     public array $column_order;
+    public bool $i18n = false;
 
     public function __construct(array $values)
     {

@@ -9,6 +9,7 @@ use NiceModules\ORM\Mapper;
 use NiceModules\ORM\Models\BaseModel;
 use NiceModules\ORM\Models\Test\Bar;
 use NiceModules\ORM\Models\Test\Foo;
+use NiceModules\ORM\Models\Test\FooI18n;
 use PHPUnit\Framework\TestCase;
 
 class BaseModelTest extends TestCase
@@ -97,6 +98,7 @@ class BaseModelTest extends TestCase
         // create bar table if not exsist
         Mapper::instance(Bar::class)->updateSchema();
         Mapper::instance(Foo::class)->updateSchema();
+        Mapper::instance(FooI18n::class)->updateSchema();
         
         $orm = Manager::instance();
         
@@ -118,6 +120,7 @@ class BaseModelTest extends TestCase
         
         $this->assertEquals($bar->getId(), $fooFromDb->getObjectRelatedBy('bar_ID')->getId());
         $orm->clean($fooFromDb);
+        Mapper::instance(FooI18n::class)->dropTable();
         Mapper::instance(Foo::class)->dropTable();
     }
 

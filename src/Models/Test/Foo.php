@@ -20,6 +20,7 @@ use NiceModules\ORM\Models\BaseModel;
  *     repository="NiceModules\ORM\Repositories\Test\FooRepository",
  *     column_order={"ID", "date_add", "date_update"},
  *     inherits="NiceModules\ORM\Models\BaseModel",
+ *     i18n=true
  *     )
  */
 class Foo extends BaseModel
@@ -27,12 +28,12 @@ class Foo extends BaseModel
     /**
      * @Column(type="datetime", null ="NULL")
      */
-    protected string $date_add = '';
+    protected string $date_add;
 
     /**
      * @Column(type="timestamp", null="NULL", default="CURRENT_TIMESTAMP")
      */
-    protected string $date_update = '';
+    protected string $date_update;
 
     /**
      * @Column(
@@ -42,13 +43,19 @@ class Foo extends BaseModel
      *     many_to_one=@ManyToOne(modelName="NiceModules\ORM\Models\Test\Bar", propertyName="ID", onDelete="CASCADE")
      *     )
      */
-    protected $bar_ID;
+    protected int $bar_ID;
     
     /**
-     * @Column(type="varchar", length="25")
+     * @Column(type="varchar", length="25", i18n=true)
      * @var string
      */
-    protected string $name = '';
+    protected string $name;
+
+    /**
+     * @Column(type="varchar", length="50", i18n=true)
+     * @var string
+     */
+    protected string $description;
     
     public function executeBeforeSave()
     {

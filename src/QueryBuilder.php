@@ -12,10 +12,11 @@ use ReflectionException;
 class QueryBuilder
 {
     const ORDER_ASC = 'ASC';
+    
     const ORDER_DESC = 'DESC';
 
     private string $query;
-    
+
     private string $whereQuery;
 
     private ?Where $where;
@@ -25,10 +26,14 @@ class QueryBuilder
     private array $order_by = [];
 
     private string $limit;
-    
+
     private ?int $count = null;
 
     private ?array $rawResult = null;
+
+    private array $join = [];
+
+    private array $ids = [];
 
     /**
      * The query result.
@@ -70,30 +75,6 @@ class QueryBuilder
      */
     public function where(string $property, $value, string $comparison = '=', string $operator = 'AND')
     {
-        // Check the property exists.
-        if (!in_array($property, $this->repository->getObjectProperties())) {
-            throw new PropertyDoesNotExistException($property, $this->repository->getObjectClass());
-        }
-
-        // Check the operator is valid.
-        if (!in_array($comparison, [
-            '<',
-            '<=',
-            '=',
-            '!=',
-            '>',
-            '>=',
-            'IN',
-            'NOT IN',
-            'LIKE',
-            'NOT LIKE',
-            'IS NULL',
-            'NOT NULL',
-        ])
-        ) {
-            throw new InvalidOperatorException($comparison);
-        }
-
         if ($this->where === null) {
             $this->where = new Where($this);
         }
@@ -143,7 +124,7 @@ class QueryBuilder
      *
      * @return $this
      */
-    public function limit(int $count, int  $offset = 0): QueryBuilder
+    public function limit(int $count, int $offset = 0): QueryBuilder
     {
         // Ignore if not valid.
         if (is_numeric($offset) && is_numeric($count) && $offset >= 0 && $count > 0) {
@@ -181,32 +162,54 @@ class QueryBuilder
         return $this;
     }
 
-    public function getCount(){
-        if($this->count === null){
-            $query = "SELECT COUNT(*) as number_of_rows FROM " . Mapper::instance($this->repository->getObjectClass())->getTableName() . " ";
-            
+    public function getCount()
+    {
+        if ($this->count === null) {
+            $query = "SELECT COUNT(*) as number_of_rows FROM " . Mapper::instance(
+                    $this->repository->getObjectClass()
+                )->getTableName() . " ";
+
             $query .= $this->getWhereQuery();
 
             $this->count = Manager::instance()->getAdapter()->fetchValue($query, $this->whereValues);
         }
-        
+
         return $this->count;
     }
-    
-    
-    private function getWhereQuery(){
-        if(!isset($this->whereQuery)){
+
+    /**
+     * @param array $join - list of property names to join related objects
+     * @return QueryBuilder
+     */
+    public function setJoin(array $join): QueryBuilder
+    {
+        $this->join = $join;
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getIds(): array
+    {
+        return $this->ids;
+    }
+
+
+    private function getWhereQuery()
+    {
+        if (!isset($this->whereQuery)) {
             // Combine the WHERE clauses and add to the SQL statement.
-            $this->whereQuery= '';
-            
+            $this->whereQuery = '';
+
             if ($this->where !== null) {
-                $this->whereQuery .=   'WHERE ' . $this->where->build() . PHP_EOL;
+                $this->whereQuery .= 'WHERE ' . $this->where->build() . PHP_EOL;
             }
         }
-        
+
         return $this->whereQuery;
     }
-    
+
     public function getRawResult(): array
     {
         if ($this->rawResult === null) {
@@ -224,32 +227,132 @@ class QueryBuilder
      * Get an array of model objects.
      *
      * @return BaseModel[]
+     * @throws Exceptions\RepositoryClassNotDefinedException
+     * @throws Exceptions\RequiredAnnotationMissingException
+     * @throws Exceptions\UnknownColumnTypeException
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
      */
     public function getResult(): array
     {
-        $objectClassname = $this->repository->getObjectClass();
-        $this->result = [];
+        if(!isset($this->result)){
+            $objectClassname = $this->repository->getObjectClass();
+            $this->result = [];
 
-        foreach ($this->getRawResult() as $row) {
-            $object = new $objectClassname();
+            $joinModel = [];
+            $joinIds = [];
 
-            array_walk($row, function ($value, $property) use (&$object) {
-                // if query has custom columns ignore them
-                if (property_exists($object, $property)) {
-                    $object->set($property, $value);
+            foreach ($this->getRawResult() as $row) {
+                /** @var BaseModel $object */
+                $object = new $objectClassname();
+
+                foreach ($row as $property => $value) {
+                    // if query has custom columns ignore them here for now
+                    if (property_exists($object, $property)) {
+                        $column = Mapper::instance($objectClassname)->getColumn($property);
+
+                        $object->set($property, $value);
+         
+                        if (in_array($property, $this->join)) {
+                            // If property is a ManyToOne, check to see if it's an object and collect id
+                            if (isset($column->many_to_one) && $object->get($property)) {
+                                $model = $column->many_to_one->modelName;
+                                $joinModel[$property] = $model;
+                                $joinIds[$model][$object->get('ID')] = $object->get($property);
+                            }
+                        }
+                    }
                 }
-            });
 
-            $object->initialize();
-            Manager::instance()->track($object);
-            $this->result[] = $object;
+                $object->initialize();
+                $this->ids[] = $object->getId();
+                Manager::instance()->track($object);
+                $this->result[] = $object;
+            }
+
+            $this->join($joinModel, $joinIds);
+            $this->joinI18n();
         }
-
+        
         return $this->result;
     }
 
     /**
+     * @throws Exceptions\RepositoryClassNotDefinedException
+     * @throws Exceptions\RequiredAnnotationMissingException
+     * @throws Exceptions\UnknownColumnTypeException
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     */
+    private function join(array $joinModel, array $joinIds)
+    {
+        foreach ($joinModel as $property => $model) {
+            $relatedObjects = Manager::instance()->getRepository($model)->findIds($joinIds[$model]);
+            /** @var BaseModel $object */
+
+            $objects = $this->getResultById();
+
+            foreach ($joinIds[$model] as $objectId => $relatedObjectId) {
+                if (isset($objects[$objectId]) && isset($relatedObjects[$relatedObjectId])) {
+                    $objects[$objectId]->setObjectRelatedBy($property, $relatedObjects[$relatedObjectId]);
+                }
+            }
+        }
+    }
+
+    /**
+     * @throws Exceptions\RepositoryClassNotDefinedException
+     * @throws Exceptions\RequiredAnnotationMissingException
+     * @throws Exceptions\UnknownColumnTypeException
+     * @throws InvalidOperatorException
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     */
+    private function joinI18n()
+    {
+        if(!$this->ids){
+            return;
+        }
+        
+        $modelClass = $this->repository->getObjectClass();
+        $mapper = Mapper::instance($modelClass);
+        $table = $mapper->getTable();
+        
+        if ($table->i18n) {
+            $columns = $mapper->getColumns();
+
+            $i18ns = Manager::instance()
+                ->getRepository($modelClass . 'I18n')
+                ->createQueryBuilder()
+                ->where('object_id', $this->ids, 'IN')
+                ->buildQuery()
+                ->getResultArray();
+
+            $i18nsByObjectId = [];
+
+            foreach ($i18ns as $i18n) {
+                foreach ($i18n as $property => $value) {
+                    if (isset($columns[$property]) && $columns[$property]->i18n) {
+                        $i18nsByObjectId[$i18n['object_id']][$i18n['language']][$property] = $value;
+                    }
+                }
+            }
+
+            foreach ($this->getResult() as $object) {
+                if (isset($i18nsByObjectId[$object->getId()])) {
+                    $object->setI18n($i18nsByObjectId[$object->getId()]);
+                }
+            }
+        }
+    }
+
+    /**
      * @return BaseModel|null
+     * @throws Exceptions\RepositoryClassNotDefinedException
+     * @throws Exceptions\RequiredAnnotationMissingException
+     * @throws Exceptions\UnknownColumnTypeException
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
      */
     public function getSingleResult(): ?BaseModel
     {
@@ -263,19 +366,19 @@ class QueryBuilder
     }
 
     /**
-     * @return BaseModel|null
+     * @return BaseModel[]
      * @throws Exceptions\RepositoryClassNotDefinedException
      * @throws Exceptions\RequiredAnnotationMissingException
      * @throws Exceptions\UnknownColumnTypeException
      * @throws PropertyDoesNotExistException
      * @throws ReflectionException
      */
-    public function getResultById(): ?BaseModel
+    public function getResultById(): array
     {
         $result = [];
 
-        foreach ($this->getResult() as $object){
-            $result[$object->get('ID')] = $object ;
+        foreach ($this->getResult() as $object) {
+            $result[$object->get('ID')] = $object;
         }
 
         return $result;
@@ -294,8 +397,8 @@ class QueryBuilder
     {
         $result = [];
 
-        foreach ($this->getResult() as $object){
-            $result[] = $object->getAllValues() ;
+        foreach ($this->getResult() as $object) {
+            $result[] = $object->getAllValues();
         }
 
         return $result;
@@ -313,13 +416,13 @@ class QueryBuilder
     {
         $result = [];
 
-        foreach ($this->getResult() as $object){
-            $result[$object->get('ID')] = $object->getAllValues() ;
+        foreach ($this->getResult() as $object) {
+            $result[$object->get('ID')] = $object->getAllValues();
         }
 
         return $result;
     }
-    
+
 
     /**
      * @return Where|null

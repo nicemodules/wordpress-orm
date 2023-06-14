@@ -2,10 +2,12 @@
 
 namespace NiceModules\Tests\ORM;
 
+use NiceModules\ORM\Logger;
 use NiceModules\ORM\Manager;
 use NiceModules\ORM\Mapper;
 use NiceModules\ORM\Models\Test\Bar;
 use NiceModules\ORM\Models\Test\Foo;
+use NiceModules\ORM\Models\Test\FooI18n;
 use NiceModules\ORM\Repositories\Test\FooRepository;
 use PHPUnit\Framework\TestCase;
 
@@ -31,6 +33,7 @@ class ManagerTest extends TestCase
     {
         Mapper::instance(Bar::class)->updateSchema();
         Mapper::instance(Foo::class)->updateSchema();
+        Mapper::instance(FooI18n::class)->updateSchema();
 
         $bars = Manager::instance()->getRepository(Bar::class)->findAll();
         
@@ -67,7 +70,12 @@ class ManagerTest extends TestCase
         $bars = $barsRepository->findAll();
 
         /** @var Foo[] $foos */
-        $foos = Manager::instance()->getRepository(Foo::class)->findAll();
+        $foos = Manager::instance()
+            ->getRepository(Foo::class)
+            ->createQueryBuilder()
+            ->setJoin(['bar_ID'])
+            ->buildQuery()
+            ->getResult();
         
         $this->assertEquals($number, count($bars));
         $this->assertEquals($number, count($foos));
@@ -81,7 +89,7 @@ class ManagerTest extends TestCase
             $this->assertInstanceOf(Bar::class, $bar);
             Manager::instance()->remove($bar);
         }
-
+        
         Manager::instance()->flush();
 
         $barsRepository = Manager::instance()->getRepository(Bar::class);

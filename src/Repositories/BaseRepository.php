@@ -101,7 +101,6 @@ class BaseRepository
     {
         return $this->createQueryBuilder()
             ->where('ID', $id, '=')
-            ->orderBy('ID', 'ASC')
             ->buildQuery()
             ->getSingleResult();
     }
@@ -123,6 +122,15 @@ class BaseRepository
             ->orderBy('ID', 'ASC')
             ->buildQuery()
             ->getResult();
+    }
+
+    public function findIds(array $ids)
+    {
+        return $this->createQueryBuilder()
+            ->where('ID',  $ids, 'IN')
+            ->orderBy('ID','ASC')
+            ->buildQuery()
+            ->getResultById();
     }
 
     /**

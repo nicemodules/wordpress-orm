@@ -22,11 +22,16 @@ abstract class BaseModel
     /**
      * @Column(type="int", length="10", null="NOT NULL", primary=true)
      */
-    protected ?int $ID;
+    protected int $ID;
 
     protected string $hash;
 
-    protected array $relatedObjects;
+    /**
+     * @var BaseModel[]
+     */
+    protected array $relatedObjects = [];
+
+    protected array $i18n = [];
 
     /**
      * BaseModel constructor.
@@ -50,8 +55,10 @@ abstract class BaseModel
             if ($property == 'ID') {
                 continue;
             }
-            
-            $object->set($property, $this->get($property));
+
+            if (isset($this->$property)) {
+                $object->set($property, $this->get($property));
+            }
         }
     }
 
@@ -72,7 +79,7 @@ abstract class BaseModel
         if (!isset($this->ID) || (isset($this->ID) && empty($this->ID))) {
             return false;
         }
-        
+
         return true;
     }
 
@@ -94,9 +101,9 @@ abstract class BaseModel
     }
 
     /**
-     * getColumns and getPlaceholders are key functions for updating/inserting model DB records, 
-     * used in the TrackedCollection collection class. 
-    *
+     * getColumns and getPlaceholders are key functions for updating/inserting model DB records,
+     * used in the TrackedCollection collection class.
+     *
      * @return Column[]
      * @throws ReflectionException
      * @throws RepositoryClassNotDefinedException
@@ -120,9 +127,9 @@ abstract class BaseModel
     }
 
     /**
-     * getColumns and getPlaceholders are key functions for updating/inserting model DB records, 
+     * getColumns and getPlaceholders are key functions for updating/inserting model DB records,
      * used in the TrackedCollection to retrieve query placeholders.
-     * 
+     *
      * @return array
      * @throws ReflectionException
      * @throws RepositoryClassNotDefinedException
@@ -139,7 +146,7 @@ abstract class BaseModel
 
         return $placeholders;
     }
-    
+
     /**
      * @return array
      * @throws ReflectionException
@@ -151,7 +158,7 @@ abstract class BaseModel
     {
         return array_keys($this->getUpdateColumns());
     }
-    
+
 
     /**
      * Return keyed values from this object as per the schema.
@@ -168,12 +175,21 @@ abstract class BaseModel
         foreach (array_keys($this->getColumns()) as $property) {
             $values[$property] = $this->get($property);
         }
+
+        foreach ($this->relatedObjects as $property => $object) {
+            $values['relatedObjects'][$property] = $object->getAllValues();
+        }
+
+        foreach ($this->i18n as $property => $i18n) {
+            $values['i18n'][$property] = $i18n;
+        }
+
         return $values;
     }
 
     /**
-     * Return unkeyed values from this object as per the schema, 
-     * used in the TrackedCollection to retrieve query values 
+     * Return unkeyed values from this object as per the schema,
+     * used in the TrackedCollection to retrieve query values
      * @return array
      * @throws PropertyDoesNotExistException
      * @throws ReflectionException
@@ -234,19 +250,22 @@ abstract class BaseModel
         if (!property_exists($this, $property)) {
             throw new PropertyDoesNotExistException($property, get_called_class());
         }
-        
+
         $column = Mapper::instance(get_called_class())->getColumn($property);
 
-        if (!isset($column->many_to_one)){
+        if (!isset($column->many_to_one)) {
             throw new NotManyToOnePropertyException($property);
-        } 
-        
-        if(!$object instanceof $column->many_to_one->modelName) {
+        }
+
+        if (!$object instanceof $column->many_to_one->modelName) {
             throw new NotInstanceOfClassException($column->many_to_one->modelName);
         }
 
         $this->relatedObjects[$property] = $object;
-        $this->$property = $object->getId();
+
+        if (!isset($this->$property) || (isset($this->$property) && $this->$property !== $object->getId())) {
+            $this->$property = $object->getId();
+        }
     }
 
     /**
@@ -326,16 +345,24 @@ abstract class BaseModel
      *  This function is executed right before write object to database
      *  Use for override
      */
-    public function executeBeforeSave(){
-        
+    public function executeBeforeSave()
+    {
     }
 
     /**
      *  This function is executed right after load object from database
      *  Use for override
      */
-    public function initialize(){
-            
-    } 
-    
+    public function initialize()
+    {
+    }
+
+    /**
+     * @param array $i18n
+     */
+    public function setI18n(array $i18n): void
+    {
+        $this->i18n = $i18n;
+    }
+
 }

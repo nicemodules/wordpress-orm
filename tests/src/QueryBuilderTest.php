@@ -4,6 +4,7 @@ namespace NiceModules\Tests\ORM;
 
 use NiceModules\ORM\Manager;
 use NiceModules\ORM\Models\Test\Bar;
+use NiceModules\ORM\Models\Test\Foo;
 use NiceModules\ORM\QueryBuilder\Where;
 use PHPUnit\Framework\TestCase;
 
@@ -15,14 +16,14 @@ class QueryBuilderTest extends TestCase
         $number = 10;
 
         $bars = [];
-        
+
         for ($i = 1; $i < $number; $i++) {
             $bar = new Bar();
             $bar->set('name', $unique . '-' . $i);
             $bars[] = $bar;
             Manager::instance()->persist($bar);
         }
-        
+
         Manager::instance()->flush();
 
         $queryBuilder = Manager::instance()
@@ -38,6 +39,7 @@ class QueryBuilderTest extends TestCase
 
         $whereU = new Where($queryBuilder);
         $whereU->addCondition('name', '%u%', 'LIKE');
+        $whereU->addCondition('name', [1, 2, 3], 'NOT IN', 'OR');
 
         $queryBuilder->getWhere()->addWhere($where57, 'OR');
         $queryBuilder->getWhere()->addWhere($whereU);
@@ -65,6 +67,4 @@ class QueryBuilderTest extends TestCase
 
         Manager::instance()->flush();
     }
-
-
 }
