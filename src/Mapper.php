@@ -353,6 +353,7 @@ class Mapper
             'longtext',
             'float',
             'decimal',
+            'boolean',
         ])
         ) {
             throw new UnknownColumnTypeException($column_type, $this->class);
