@@ -12,28 +12,26 @@ use ReflectionException;
 class QueryBuilder
 {
     const ORDER_ASC = 'ASC';
-    
     const ORDER_DESC = 'DESC';
 
+    /**
+     * @var Mapper[]
+     */
+    private array $joins = [];
+    /**
+     * @var Where[]
+     */
+    private array $leftJoinsWhere = [];
+    private array $ids = [];
     private string $query;
-
     private string $whereQuery;
-
     private ?Where $where;
-
     private array $whereValues = [];
-
-    private array $order_by = [];
-
+    private array $orderBy = [];
     private string $limit;
-
     private ?int $count = null;
-
     private ?array $rawResult = null;
 
-    private array $join = [];
-
-    private array $ids = [];
 
     /**
      * The query result.
@@ -46,6 +44,9 @@ class QueryBuilder
      * @var BaseRepository
      */
     private BaseRepository $repository;
+    private Mapper $mapper;
+    private ?I18nService $i18nService;
+    private ?Mapper $i18nMapper = null;
 
     /**
      * QueryBuilder constructor.
@@ -54,11 +55,19 @@ class QueryBuilder
     {
         // Set some default values.
         $this->where = null;
-        $this->order_by = [];
+        $this->orderBy = [];
         $this->limit = '';
 
         // And store the sent repository.
         $this->repository = $repository;
+        $this->mapper = $this->repository->getMapper();
+
+        $this->i18nService = Manager::instance()->getI18nService();
+
+        if ($this->mapper->getTable()->i18n && $this->i18nService->needTranslation()) {
+            $i18nModelClass = $this->mapper->getClass() . 'I18n';
+            $this->i18nMapper = Mapper::instance($i18nModelClass);
+        }
     }
 
     /**
@@ -75,13 +84,49 @@ class QueryBuilder
      */
     public function where(string $property, $value, string $comparison = '=', string $operator = 'AND')
     {
+        $this->getWhere()->addCondition($this->mapper->getClass(), $property, $value, $comparison, $operator);
+
+        return $this;
+    }
+
+    public function join(string $manyToOneProperty): QueryBuilder
+    {
+        $manyToOne = $this->mapper->getForeignKey($manyToOneProperty);
+
+        $this->joins[$manyToOneProperty] = $manyToOne->modelName;
+
+        $this->getWhere()->addJoinCondition($this->mapper->getClass(), $manyToOneProperty, $manyToOne->modelName, 'ID');
+
+        return $this;
+    }
+
+    public function leftJoin(string $manyToOneProperty): QueryBuilder
+    {
+        $manyToOne = $this->mapper->getForeignKey($manyToOneProperty);
+        $where = new Where($this);
+        $where->addJoinCondition($this->mapper->getClass(), 'ID', $manyToOne->modelName, $manyToOneProperty);
+        $this->leftJoinsWhere[$manyToOneProperty] = $where;
+        return $this;
+    }
+
+    public function getLeftJoinWhere($property): Where
+    {
+        if (!isset($this->leftJoinsWhere[$property])) {
+            throw new PropertyDoesNotExistException($property, $this->mapper->getClass());
+        }
+        return $this->leftJoinsWhere[$property];
+    }
+
+    /**
+     * @return Where
+     */
+    public function getWhere(): Where
+    {
         if ($this->where === null) {
             $this->where = new Where($this);
         }
 
-        $this->where->addCondition($property, $value, $comparison, $operator);
-
-        return $this;
+        return $this->where;
     }
 
     /**
@@ -111,7 +156,7 @@ class QueryBuilder
         }
 
         // Save it
-        $this->order_by[] = $property . " " . $direction . " ";
+        $this->orderBy[] = $property . " " . $direction . " ";
 
         return $this;
     }
@@ -145,46 +190,107 @@ class QueryBuilder
      */
     public function buildQuery()
     {
-        $this->query = "SELECT * FROM " . Mapper::instance($this->repository->getObjectClass())->getTableName() . " ";
-
-        $this->query .= $this->getWhereQuery();
-
-        // Add the ORDER BY clause.
-        if ($this->order_by) {
-            $this->query .= "ORDER BY " . implode(', ', $this->order_by);
-        }
-
-        // Add the LIMIT clause.
-        if ($this->limit) {
-            $this->query .= $this->limit;
-        }
+        $this->query = 'SELECT' .
+            ' ' . $this->getColumnQuery() .
+            ' ' . $this->getTableQuery() .
+            ' ' . $this->getWhereQuery() .
+            ' ' . $this->getOrderQuery() .
+            ' ' . $this->getLimitQuery();
 
         return $this;
+    }
+
+    /**
+     * @return Mapper
+     */
+    public function getMapper(): Mapper
+    {
+        return $this->mapper;
+    }
+
+    private function getColumnQuery()
+    {
+        $columns = $this->mapper->getColumnTableNames();
+
+        if ($this->i18nMapper) {
+            $columns = array_merge($columns, $this->i18nMapper->getTableColumnNames());
+        }
+
+        foreach ($this->joinMappers as $mapper) {
+            $columns = array_merge($columns, $mapper->getTableColumnNames());
+        }
+
+        return implode(', ', $columns);
+    }
+
+    private function getTableQuery()
+    {
+        $tables[] = $this->mapper->getTableName();
+
+        foreach ($this->joins as $joinModel) {
+            $tables[] = Mapper::instance($joinModel)->getTableColumnNames();
+        }
+
+        $i18nLeftJoinQuery = '';
+        if ($this->i18nMapper) {
+            $where = new Where($this);
+            $where->addJoinCondition($this->mapper->getClass(), 'ID', $this->i18nMapper->getClass(), 'object_id');
+            $where->addCondition($this->i18nMapper->getClass(), 'language', $this->i18nService->getLanguage());
+            $i18nLeftJoinQuery = ' LEFT OUTER JOIN ' . $this->i18nMapper->getTableName() . ' ON ' . $where->build();
+        }
+
+        $leftJoinsQueries = [];
+        foreach ($this->leftJoinsWhere as $property => $where) {
+            $manyToOne = $this->mapper->getForeignKey($property);
+            $leftJoinsQueries[] = 'LEFT OUTER JOIN ' . Mapper::instance($manyToOne->modelName)->getTableName(
+                ) . ' ON ' . $where->build();
+        }
+
+        return 'FROM (' . implode(', ', $tables) . ')' . $i18nLeftJoinQuery . ' ' . implode(' ', $leftJoinsQueries);
+    }
+
+
+    private function getWhereQuery()
+    {
+        $where = '';
+
+        if ($this->where !== null) {
+            $where .= 'WHERE ' . $this->where->build();
+        }
+
+        return $where;
+    }
+
+    private function getOrderQuery()
+    {
+        $orderQuery = '';
+
+        if ($this->orderBy) {
+            $orderQuery .= 'ORDER BY ' . implode(', ', $this->orderBy);
+        }
+
+        return $orderQuery;
+    }
+
+    private function getLimitQuery()
+    {
+        $query = '';
+        if ($this->limit) {
+            $query .= $this->limit;
+        }
+        return $query;
     }
 
     public function getCount()
     {
         if ($this->count === null) {
-            $query = "SELECT COUNT(*) as number_of_rows FROM " . Mapper::instance(
-                    $this->repository->getObjectClass()
-                )->getTableName() . " ";
-
-            $query .= $this->getWhereQuery();
-
+            $query = 'SELECT COUNT(*) as number_of_rows ' . $this->getTableQuery() .
+                ' ' . $this->getWhereQuery();
+            
             $this->count = Manager::instance()->getAdapter()->fetchValue($query, $this->whereValues);
         }
 
         return $this->count;
-    }
-
-    /**
-     * @param array $join - list of property names to join related objects
-     * @return QueryBuilder
-     */
-    public function setJoin(array $join): QueryBuilder
-    {
-        $this->join = $join;
-        return $this;
     }
 
     /**
@@ -195,20 +301,6 @@ class QueryBuilder
         return $this->ids;
     }
 
-
-    private function getWhereQuery()
-    {
-        if (!isset($this->whereQuery)) {
-            // Combine the WHERE clauses and add to the SQL statement.
-            $this->whereQuery = '';
-
-            if ($this->where !== null) {
-                $this->whereQuery .= 'WHERE ' . $this->where->build() . PHP_EOL;
-            }
-        }
-
-        return $this->whereQuery;
-    }
 
     public function getRawResult(): array
     {
@@ -235,118 +327,61 @@ class QueryBuilder
      */
     public function getResult(): array
     {
-        if(!isset($this->result)){
-            $objectClassname = $this->repository->getObjectClass();
+        if (!isset($this->result)) {
             $this->result = [];
 
-            $joinModel = [];
-            $joinIds = [];
-
             foreach ($this->getRawResult() as $row) {
-                /** @var BaseModel $object */
-                $object = new $objectClassname();
-
-                foreach ($row as $property => $value) {
-                    // if query has custom columns ignore them here for now
-                    if (property_exists($object, $property)) {
-                        $column = Mapper::instance($objectClassname)->getColumn($property);
-
-                        $object->set($property, $value);
-         
-                        if (in_array($property, $this->join)) {
-                            // If property is a ManyToOne, check to see if it's an object and collect id
-                            if (isset($column->many_to_one) && $object->get($property)) {
-                                $model = $column->many_to_one->modelName;
-                                $joinModel[$property] = $model;
-                                $joinIds[$model][$object->get('ID')] = $object->get($property);
-                            }
-                        }
-                    }
-                }
-
+                $object = $this->getObject($this->mapper->getClass(), $row);
                 $object->initialize();
                 $this->ids[] = $object->getId();
                 $this->result[] = $object;
-            }
 
-            $this->join($joinModel, $joinIds);
-            $this->joinI18n();
+                $this->setRelatedObjects($object, $row);
+                $this->setI18n($object, $row);
+            }
         }
-        
-        
-        foreach ($this->result as $object){
+
+        foreach ($this->result as $object) {
             Manager::instance()->track($object);
         }
-        
+
         return $this->result;
     }
 
-    /**
-     * @throws Exceptions\RepositoryClassNotDefinedException
-     * @throws Exceptions\RequiredAnnotationMissingException
-     * @throws Exceptions\UnknownColumnTypeException
-     * @throws PropertyDoesNotExistException
-     * @throws ReflectionException
-     */
-    private function join(array $joinModel, array $joinIds)
+    protected function getObject(string $model, array $row): BaseModel
     {
-        foreach ($joinModel as $property => $model) {
-            $relatedObjects = Manager::instance()->getRepository($model)->findIds($joinIds[$model]);
-            /** @var BaseModel $object */
+        $mapper = Mapper::instance($model);
 
-            $objects = $this->getResultById();
+        /** @var BaseModel $object */
+        $object = new $model();
 
-            foreach ($joinIds[$model] as $objectId => $relatedObjectId) {
-                if (isset($objects[$objectId]) && isset($relatedObjects[$relatedObjectId])) {
-                    $objects[$objectId]->setObjectRelatedBy($property, $relatedObjects[$relatedObjectId]);
-                }
+        foreach ($row as $tableColumn => $value) {
+            // if result has custom columns ignore them here for now
+            if ($mapper->hasTableColumnName($tableColumn)) {
+                $property = $mapper->getTableColumnNameProperty($tableColumn);
+                $object->set($property, $value);
             }
+        }
+
+        return $object;
+    }
+
+    private function setRelatedObjects(BaseModel $object, array $row)
+    {
+        foreach ($this->joins as $property => $modelName) {
+            $manyToOne = $this->mapper->getForeignKey($property);
+            $relatedObject = $this->getObject($manyToOne->modelName, $row);
+            $object->setObjectRelatedBy($property, $relatedObject);
+            Manager::instance()->track($relatedObject);
         }
     }
 
-    /**
-     * @throws Exceptions\RepositoryClassNotDefinedException
-     * @throws Exceptions\RequiredAnnotationMissingException
-     * @throws Exceptions\UnknownColumnTypeException
-     * @throws InvalidOperatorException
-     * @throws PropertyDoesNotExistException
-     * @throws ReflectionException
-     */
-    private function joinI18n()
+    private function setI18n(BaseModel $object, array $row)
     {
-        if(!$this->ids){
-            return;
-        }
-        
-        $modelClass = $this->repository->getObjectClass();
-        $mapper = Mapper::instance($modelClass);
-        $table = $mapper->getTable();
-        
-        if ($table->i18n) {
-            $columns = $mapper->getColumns();
-
-            $i18ns = Manager::instance()
-                ->getRepository($modelClass . 'I18n')
-                ->createQueryBuilder()
-                ->where('object_id', $this->ids, 'IN')
-                ->buildQuery()
-                ->getResultArray();
-
-            $i18nsByObjectId = [];
-
-            foreach ($i18ns as $i18n) {
-                foreach ($i18n as $property => $value) {
-                    if (isset($columns[$property]) && $columns[$property]->i18n) {
-                        $i18nsByObjectId[$i18n['object_id']][$i18n['language']][$property] = $value;
-                    }
-                }
-            }
-
-            foreach ($this->getResult() as $object) {
-                if (isset($i18nsByObjectId[$object->getId()])) {
-                    $object->setI18n($i18nsByObjectId[$object->getId()]);
-                }
-            }
+        if ($this->i18nMapper) {
+            $i18nObject = $this->getObject($this->i18nMapper->getClass(), $row);
+            $object->setI18n($i18nObject);
+            Manager::instance()->track($i18nObject);
         }
     }
 
@@ -388,7 +423,6 @@ class QueryBuilder
         return $result;
     }
 
-
     /**
      * @return array
      * @throws Exceptions\RepositoryClassNotDefinedException
@@ -425,19 +459,6 @@ class QueryBuilder
         }
 
         return $result;
-    }
-
-
-    /**
-     * @return Where|null
-     */
-    public function getWhere(): ?Where
-    {
-        if ($this->where == null) {
-            $this->where = new Where($this);
-        }
-
-        return $this->where;
     }
 
     /**

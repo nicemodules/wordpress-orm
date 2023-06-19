@@ -6,14 +6,15 @@ use NiceModules\ORM\Exceptions\InvalidOperatorException;
 use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
 use NiceModules\ORM\Mapper;
 use NiceModules\ORM\QueryBuilder;
-use Throwable;
 
-class WhereCondition
+class WhereJoinCondition implements Condition
 {
+
     protected QueryBuilder $queryBuilder;
     protected string $modelClass;
     protected string $property;
-    protected $value;
+    protected string $joinModelClass;
+    protected $joinProperty;
     protected string $comparison;
     protected string $operator;
 
@@ -34,25 +35,32 @@ class WhereCondition
      */
     public function __construct(
         QueryBuilder $queryBuilder,
-        string $modelClass, 
+        string $modelClass,
         string $property,
-        $value,
+        string $joinModelClass,
+        string $joinProperty,
         string $comparison = '=',
         string $operator = 'AND'
     ) {
         $this->queryBuilder = $queryBuilder;
         $this->modelClass = $modelClass;
         $this->property = $property;
-        $this->value = $value;
+        $this->joinModelClass = $joinModelClass;
+        $this->joinProperty = $joinProperty;
         $this->comparison = $comparison;
         $this->operator = $operator;
-             
-        
+
+
         // Check the property exists.
         if (!Mapper::instance($this->modelClass)->hasColumn($property)) {
             throw new PropertyDoesNotExistException($property, $this->modelClass);
         }
-        
+
+        // Check the property exists.
+        if (!Mapper::instance($this->joinModelClass)->hasColumn($this->joinProperty)) {
+            throw new PropertyDoesNotExistException($this->joinProperty, $this->modelClass);
+        }
+
         // Check the comparison is valid.
         if (!in_array($this->comparison, [
             '<',
@@ -74,29 +82,24 @@ class WhereCondition
 
         // Check the comparison is valid.
         if (!in_array($operator, [
-           'AND', 'OR'
+            'AND', 'OR'
         ])
         ) {
             throw new InvalidOperatorException($this->operator);
         }
-   
     }
 
     /**
      * @return string
-     * @throws PropertyDoesNotExistException
-     * @throws Throwable
+     * @throws PropelException
      */
     public function build(): string
     {
-        
+
         $property = Mapper::instance($this->modelClass)->getTableColumnName($this->property);
-        
-        if (in_array($this->comparison, ['IN', 'NOT IN'])) {
-            return $property . ' ' . $this->comparison . ' ' . $this->getValues($this->property, $this->value);
-        } else {
-            return $property . ' ' . $this->comparison . ' ' . $this->getValue($this->property, $this->value);
-        }
+        $joinProperty = Mapper::instance($this->joinModelClass)->getTableColumnName($this->joinProperty);
+
+        return $property . ' ' . $this->comparison . ' ' . $joinProperty;
     }
 
     /**
@@ -105,35 +108,5 @@ class WhereCondition
     public function getOperator(): string
     {
         return $this->operator;
-    }
-
-    /**
-     * @param string $property
-     * @param $value
-     * @return string
-     */
-    protected function getValue(string $property, $value): string
-    {
-        $this->queryBuilder->addWhereValue($value);
-        
-        return Mapper::instance($this->modelClass)->getPlaceholder($property);
-    }
-
-
-    /**
-     * @param string $property
-     * @param array $values
-     * @return string
-     */
-    protected function getValues(string $property, array $values): string
-    {
-        $placeholders = [];
-        
-        foreach($values as $value){
-            $this->queryBuilder->addWhereValue($value);
-            $placeholders[] = Mapper::instance($this->modelClass)->getPlaceholder($property);
-        }
-        
-        return '('.implode(', ', $placeholders).')';
     }
 }

@@ -23,6 +23,7 @@ class Manager extends Singleton
      */
     private TrackedCollection $tracked;
     private DatabaseAdapter $adapter;
+    private ?I18nService $i18nService = null;
 
 
     /**
@@ -47,6 +48,11 @@ class Manager extends Singleton
 //                }
 //                break;
 //        }
+    }
+
+    public function setI18nService(I18nService $i18nService)
+    {
+        $this->i18nService = $i18nService;
     }
 
     /**
@@ -85,7 +91,7 @@ class Manager extends Singleton
         // Start tracking this object (because it is new, it will be tracked as
         // something to be INSERTed)
         $this->tracked[$object] = TrackedCollection::_OBJECT_NEW;
-        
+
         return $this;
     }
 
@@ -99,7 +105,7 @@ class Manager extends Singleton
     {
         // Save it against the key.
         $this->tracked[$object] = TrackedCollection::_OBJECT_TRACKED;
-        
+
         return $this;
     }
 
@@ -112,7 +118,7 @@ class Manager extends Singleton
     public function remove(BaseModel $object): Manager
     {
         unset($this->tracked[$object]);
-        
+
         return $this;
     }
 
@@ -126,7 +132,7 @@ class Manager extends Singleton
     {
         // Save it against the key.
         $this->tracked[$object] = TrackedCollection::_OBJECT_CLEAN;
-        
+
         return $this;
     }
 
@@ -155,8 +161,16 @@ class Manager extends Singleton
         $this->_flush_update();
         $this->_flush_insert();
         $this->_flush_delete();
-        
+
         return $this;
+    }
+
+    /**
+     * @return I18nService|null
+     */
+    public function getI18nService(): ?I18nService
+    {
+        return $this->i18nService;
     }
 
     /**

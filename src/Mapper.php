@@ -10,6 +10,7 @@ use NiceModules\ORM\Exceptions\AllowDropIsFalseException;
 use NiceModules\ORM\Exceptions\AllowSchemaUpdateIsFalseException;
 use NiceModules\ORM\Exceptions\IncompleteIndexException;
 use NiceModules\ORM\Exceptions\IncompleteManyToOneException;
+use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
 use NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException;
 use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
 use NiceModules\ORM\Exceptions\UnknownColumnTypeException;
@@ -121,7 +122,7 @@ class Mapper
     public function getPlaceholder($property): ?string
     {
         if (isset($this->placeholders[$property])) {
-            return  $this->placeholders[$property];
+            return $this->placeholders[$property];
         }
 
         return null;
@@ -129,15 +130,69 @@ class Mapper
 
     /**
      * @param $name
-     * @return Column|null
+     * @return Column
+     * @throws PropertyDoesNotExistException
      */
-    public function getColumn($name): ?Column
+    public function getColumn($name): Column
     {
-        if (isset($this->columns[$name])) {
-            return $this->columns[$name];
+        if (!isset($this->columns[$name])) {
+            throw new PropertyDoesNotExistException($name, $this->class);
         }
 
-        return null;
+        return $this->columns[$name];
+    }
+
+    /**
+     * @param $name
+     * @return bool
+     */
+    public function hasColumn($name): bool
+    {
+        return isset($this->columns[$name]);
+    }
+
+    /**
+     * @return array
+     */
+    public function getTableColumnNames(): array
+    {
+        $columnNames = $this->getColumnNames();
+
+        $tableColumnNames = [];
+        foreach ($columnNames as $columnName) {
+            $tableColumnNames[$columnName] = $this->getTableColumnName() . '.' . $columnName;
+        }
+
+        return $tableColumnNames;
+    }
+
+    public function getTableColumnName($name): string
+    {
+        $tableColumnNames = $this->getTableColumnNames();
+
+        if (isset($tableColumnNames[$name])) {
+            throw new PropertyDoesNotExistException($name, $this->class);
+        }
+
+        return $tableColumnNames[$name];
+    }
+
+    public function getTableColumnNameProperty($tableColumnName): string
+    {
+        $tableColumnNames = $this->getTableColumnNames();
+
+        if (!in_array($tableColumnName, $tableColumnNames)) {
+            throw new PropertyDoesNotExistException($tableColumnName, $this->class);
+        }
+
+        return array_search($tableColumnName, $tableColumnNames);
+    }
+
+    public function hasTableColumnName($name): bool
+    {
+        $tableColumnNames = $this->getTableColumnNames();
+
+        return in_array($name, $tableColumnNames);
     }
 
     /**
@@ -188,6 +243,15 @@ class Mapper
         return $this->foreignKeys;
     }
 
+    public function getForeignKey($name): ManyToOne
+    {
+        if (!isset($this->foreignKeys[$name])) {
+            throw new PropertyDoesNotExistException($name, $this->class);
+        }
+
+        return $this->foreignKeys[$name];
+    }
+
     /**
      * Compares a database table schema to the model schema (as defined in th
      * annotations). If there are any differences, the database schema is modified to
@@ -220,7 +284,7 @@ class Mapper
         $sql = "DROP TABLE IF EXISTS " . $this->getPrefix() . $this->table->name;
         Manager::instance()->getAdapter()->execute($sql);
     }
-    
+
     /**
      * @return Column[]
      */
@@ -305,18 +369,18 @@ class Mapper
             if (isset($column->type)) {
                 // Register annotation 
                 $this->columns[$property->name] = $column;
-                
-                if($column->allow_update){
+
+                if ($column->allow_update) {
                     $this->updateColumns[$property->name] = $column;
                 }
-                
+
                 if (isset($column->primary)) {
                     $this->primaryKeys[] = $property->name;
                 }
 
                 $this->addSchemaString($property, $column);
-                
-                if($column->allow_update) {
+
+                if ($column->allow_update) {
                     $this->addPlaceholder($property, $column);
                 }
             }

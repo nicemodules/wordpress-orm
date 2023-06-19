@@ -31,7 +31,7 @@ abstract class BaseModel
      */
     protected array $relatedObjects = [];
 
-    protected array $i18n = [];
+    protected BaseModel $i18n;
 
     /**
      * BaseModel constructor.
@@ -180,8 +180,8 @@ abstract class BaseModel
             $values['relatedObjects'][$property] = $object->getAllValues();
         }
 
-        foreach ($this->i18n as $property => $i18n) {
-            $values['i18n'][$property] = $i18n;
+        if (isset($this->i18n)) {
+            $values['i18n'] = $this->i18n->getAllValues();
         }
 
         return $values;
@@ -358,11 +358,20 @@ abstract class BaseModel
     }
 
     /**
-     * @param array $i18n
+     * @param BaseModel $i18n
      */
-    public function setI18n(array $i18n): void
+    public function setI18n(BaseModel $i18n): void
     {
         $this->i18n = $i18n;
     }
+
+    /**
+     * @return BaseModel
+     */
+    public function getI18n(): BaseModel
+    {
+        return $this->i18n;
+    }
+
 
 }
