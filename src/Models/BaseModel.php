@@ -173,7 +173,7 @@ abstract class BaseModel
     {
         $values = [];
         foreach (array_keys($this->getColumns()) as $property) {
-            $values[$property] = $this->get($property);
+            $values[$property] = $this->getTranslated($property);
         }
 
         foreach ($this->relatedObjects as $property => $object) {
@@ -275,10 +275,6 @@ abstract class BaseModel
      *
      * @return mixed
      * @throws PropertyDoesNotExistException
-     * @throws ReflectionException
-     * @throws RepositoryClassNotDefinedException
-     * @throws RequiredAnnotationMissingException
-     * @throws UnknownColumnTypeException
      */
     final public function get(string $property)
     {
@@ -288,22 +284,40 @@ abstract class BaseModel
         }
 
         // Return the value of the field.
-        if ($this->needTranslation($property)) {
-            $i18n = $this->getOrCreateI18n();
-            $defaultValue = $this->$property ?? null;
-
-            if (Mapper::instance(get_called_class())->isTextProperty($property) && $defaultValue && !$i18n->get(
-                    $property
-                )) {
-                $i18n->set($property, Manager::instance()->getI18nService()->translateDefaultToCurrent($defaultValue));
-            }
-
-            return $i18n->get($property);
-        } elseif (isset($this->$property)) {
+        if (isset($this->$property)) {
             return $this->$property;
         }
 
         return null;
+    }
+
+    /**
+     * @param string $property
+     * @return mixed|void|null
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
+     */
+    final public function getTranslated(string $property)
+    {
+        if ($this->needTranslation($property)) {
+            $i18n = $this->getOrCreateI18n();
+
+            if (Mapper::instance(get_called_class())->isTextProperty($property)
+                && $this->get($property)
+                && !$i18n->get($property)) {
+                $i18n->set(
+                    $property,
+                    Manager::instance()->getI18nService()->translateDefaultToCurrent($this->get($property))
+                );
+            }
+
+            return $i18n->get($property);
+        }
+
+        return $this->get($property);
     }
 
     /**
@@ -423,7 +437,8 @@ abstract class BaseModel
     public function needTranslation($property): bool
     {
         $column = Mapper::instance(get_called_class())->getColumn($property);
-            
-        return $column->i18n && Manager::instance()->getI18nService() && Manager::instance()->getI18nService()->needTranslation() ;
+
+        return $column->i18n && Manager::instance()->getI18nService() && Manager::instance()->getI18nService(
+            )->needTranslation();
     }
 }

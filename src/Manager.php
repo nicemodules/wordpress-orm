@@ -234,6 +234,7 @@ class Manager extends Singleton
                             
                             if($object->getI18n()){
                                 $object->getI18n()->set('object_id', $object->getId());
+                                $this->persist($object->getI18n());
                             }
                            
                             $this->track($object);
@@ -249,6 +250,12 @@ class Manager extends Singleton
                     throw $e;
                 }
             }
+            
+            //if flush generated insert objects, flush them again
+            if($this->tracked->getInsertUpdateTableData('getPersistedObjects')){
+                $this->_flush_insert();
+            }
+            
         }
     }
 

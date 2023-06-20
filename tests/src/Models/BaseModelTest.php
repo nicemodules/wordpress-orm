@@ -190,7 +190,12 @@ class BaseModelTest extends TestCase
         Manager::instance()->persist($foo);
         Manager::instance()->flush();
         
-        $this->assertEquals($foo->getI18n()->get('name'), 'Próba mikrofonu');
+        print_r(PHP_EOL.'___3:'.PHP_EOL);
+        print_r($foo);
+        print_r(PHP_EOL);
         
+        $this->assertEquals($foo->get('name'), 'Microphone test');
+        $this->assertEquals($foo->getTranslated('name'), 'Próba mikrofonu');
+        $this->assertEquals($foo->getI18n()->get('name'), 'Próba mikrofonu');
     }
 }
