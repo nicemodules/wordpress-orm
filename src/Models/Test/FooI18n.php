@@ -45,7 +45,7 @@ class FooI18n extends BaseModel
     protected string $name;
 
     /**
-     * @Column(type="varchar", length="50", i18n=true)
+     * @Column(type="varchar", length="50")
      * @var string
      */
     protected string $description;

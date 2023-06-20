@@ -288,7 +288,18 @@ abstract class BaseModel
         }
 
         // Return the value of the field.
-        if (isset($this->$property)) {
+        if ($this->needTranslation($property)) {
+            $i18n = $this->getOrCreateI18n();
+            $defaultValue = $this->$property ?? null;
+
+            if (Mapper::instance(get_called_class())->isTextProperty($property) && $defaultValue && !$i18n->get(
+                    $property
+                )) {
+                $i18n->set($property, Manager::instance()->getI18nService()->translateDefaultToCurrent($defaultValue));
+            }
+
+            return $i18n->get($property);
+        } elseif (isset($this->$property)) {
             return $this->$property;
         }
 
@@ -322,21 +333,35 @@ abstract class BaseModel
     /**
      * Generic setter.
      *
-     * @param $column
+     * @param $property
      * @param $value
      *
      * @return bool
      * @throws PropertyDoesNotExistException
      */
-    final public function set($column, $value): bool
+    final public function set($property, $value): bool
     {
         // Check to see if the property exists on the model.
-        if (!property_exists($this, $column)) {
-            throw new PropertyDoesNotExistException($column, get_called_class());
+        if (!property_exists($this, $property)) {
+            throw new PropertyDoesNotExistException($property, get_called_class());
         }
 
-        // Update the model with the value.
-        $this->$column = $value;
+        if ($this->needTranslation($property)) {
+            $i18n = $this->getOrCreateI18n();
+            $i18n->set($property, $value);
+
+            if (Mapper::instance(get_called_class())->isTextProperty($property)) {
+                if (!isset($this->$property) || ($value && empty($this->$property))) {
+                    // Automatically set the object default language translated value if needed
+                    $this->$property = Manager::instance()->getI18nService()->translateCurrentToDefault($value);
+                } elseif (empty($value)) {
+                    $this->$property = $value;
+                }
+            }
+        } else {
+            // Just update the model with the value, if no need translation
+            $this->$property = $value;
+        }
 
         return true;
     }
@@ -366,12 +391,39 @@ abstract class BaseModel
     }
 
     /**
-     * @return BaseModel
+     * @return BaseModel|null
      */
-    public function getI18n(): BaseModel
+    public function getI18n(): ?BaseModel
     {
+        if (!isset($this->i18n)) {
+            return null;
+        }
+
         return $this->i18n;
     }
 
 
+    protected function getOrCreateI18n(): BaseModel
+    {
+        if (!isset($this->i18n)) {
+            $i8nClassName = get_called_class() . 'I18n';
+            $this->i18n = new $i8nClassName();
+
+            if ($this->getId()) {
+                $this->i18n->set('object_id', $this->getId());
+                Manager::instance()->persist($this->i18n);
+            }
+
+            $this->i18n->set('language', Manager::instance()->getI18nService()->getLanguage());
+        }
+
+        return $this->getI18n();
+    }
+
+    public function needTranslation($property): bool
+    {
+        $column = Mapper::instance(get_called_class())->getColumn($property);
+            
+        return $column->i18n && Manager::instance()->getI18nService() && Manager::instance()->getI18nService()->needTranslation() ;
+    }
 }

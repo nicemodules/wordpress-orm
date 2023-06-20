@@ -4,6 +4,7 @@ namespace NiceModules\Tests\ORM\Models;
 
 use Cassandra\Map;
 use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
+use NiceModules\ORM\I18nService;
 use NiceModules\ORM\Manager;
 use NiceModules\ORM\Mapper;
 use NiceModules\ORM\Models\BaseModel;
@@ -151,5 +152,45 @@ class BaseModelTest extends TestCase
     {
         $foo = new Foo();
         $this->assertIsString($foo->getHash());
+    }
+    
+    public function testGetI18h(){
+        Mapper::instance(Foo::class)->updateSchema();
+        Mapper::instance(FooI18n::class)->updateSchema();
+        
+        $i18nService = $this->createMock(I18nService::class);
+        
+        $i18nService->expects($this->atLeastOnce())
+            ->method('needTranslation')
+            ->willReturn(true);
+
+        $i18nService->expects($this->any())
+            ->method('translateDefaultToCurrent')
+            ->willReturn('Próba mikrofonu');
+        
+        $i18nService->expects($this->atLeastOnce())
+            ->method('translateCurrentToDefault')
+            ->willReturn('Microphone test');
+        
+         $i18nService->expects($this->atLeastOnce())
+            ->method('getLanguage')
+            ->willReturn('PL');
+        
+        Manager::instance()->setI18nService($i18nService);
+
+
+        $bar = new Bar();
+        Manager::instance()->persist($bar);
+        Manager::instance()->flush();
+        
+        $foo = new Foo();
+        $foo->set('name', 'Próba mikrofonu');
+        $foo->setObjectRelatedBy('bar_ID', $bar);
+        
+        Manager::instance()->persist($foo);
+        Manager::instance()->flush();
+        
+        $this->assertEquals($foo->getI18n()->get('name'), 'Próba mikrofonu');
+        
     }
 }

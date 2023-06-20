@@ -228,8 +228,14 @@ class Manager extends Singleton
                     if ($count && $count == $result->rows && $count == count($values['objects'])) {
                         $this->getAdapter()->execute('COMMIT;');
 
+                        /** @var BaseModel $object */
                         foreach ($values['objects'] as $object) {
                             $object->set('ID', $result->id);
+                            
+                            if($object->getI18n()){
+                                $object->getI18n()->set('object_id', $object->getId());
+                            }
+                           
                             $this->track($object);
                             $result->id++;
                         }

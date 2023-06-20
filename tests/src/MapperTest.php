@@ -6,6 +6,7 @@ use NiceModules\ORM\Annotations\Column;
 use NiceModules\ORM\Annotations\Table;
 use NiceModules\ORM\Exceptions\AllowDropIsFalseException;
 use NiceModules\ORM\Exceptions\AllowSchemaUpdateIsFalseException;
+use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
 use NiceModules\ORM\Mapper;
 use NiceModules\ORM\Models\Test\Bar;
 use NiceModules\ORM\Models\Test\Baz;
@@ -48,8 +49,13 @@ class MapperTest extends TestCase
         $mapper = Mapper::instance(Foo::class);
         $column = $mapper->getColumn('name');
         $this->assertInstanceOf(Column::class, $column);
-        $column = $mapper->getColumn('foo');
-        $this->assertNull($column);
+        
+        try {
+            $mapper->getColumn('foo');
+        } catch (PropertyDoesNotExistException $e) {
+            $this->assertInstanceOf(PropertyDoesNotExistException::class, $e);
+            return;
+        }
     }
 
     public function testGetColums()

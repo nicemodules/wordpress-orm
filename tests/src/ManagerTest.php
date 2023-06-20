@@ -73,9 +73,15 @@ class ManagerTest extends TestCase
         $foos = Manager::instance()
             ->getRepository(Foo::class)
             ->createQueryBuilder()
-            ->setJoin(['bar_ID'])
+            ->join('bar_ID')
             ->buildQuery()
             ->getResult();
+
+
+        
+        foreach ($foos as $foo){
+            $this->assertInstanceOf(Bar::class,$foo->getObjectRelatedBy('bar_ID'));
+        }
         
         $this->assertEquals($number, count($bars));
         $this->assertEquals($number, count($foos));

@@ -34,12 +34,12 @@ class QueryBuilderTest extends TestCase
             ->where('name', '%-%', 'LIKE');
 
         $where57 = new Where($queryBuilder);
-        $where57->addCondition('name', '%-5%', 'LIKE', 'OR')
-            ->addCondition('name', '%-7%', 'LIKE', 'OR');
+        $where57->addCondition(Bar::class, 'name', '%-5%', 'LIKE', 'OR')
+            ->addCondition(Bar::class,'name', '%-7%', 'LIKE', 'OR');
 
         $whereU = new Where($queryBuilder);
-        $whereU->addCondition('name', '%u%', 'LIKE');
-        $whereU->addCondition('name', [1, 2, 3], 'NOT IN', 'OR');
+        $whereU->addCondition(Bar::class,'name', '%u%', 'LIKE');
+        $whereU->addCondition(Bar::class,'name', [1, 2, 3], 'NOT IN', 'OR');
 
         $queryBuilder->getWhere()->addWhere($where57, 'OR');
         $queryBuilder->getWhere()->addWhere($whereU);

@@ -8,6 +8,7 @@ use NiceModules\ORM\Models\BaseModel;
 use NiceModules\ORM\QueryBuilder\Where;
 use NiceModules\ORM\Repositories\BaseRepository;
 use ReflectionException;
+use stdClass;
 
 class QueryBuilder
 {
@@ -64,7 +65,7 @@ class QueryBuilder
 
         $this->i18nService = Manager::instance()->getI18nService();
 
-        if ($this->mapper->getTable()->i18n && $this->i18nService->needTranslation()) {
+        if ($this->mapper->getTable()->i18n && $this->i18nService && $this->i18nService->needTranslation()) {
             $i18nModelClass = $this->mapper->getClass() . 'I18n';
             $this->i18nMapper = Mapper::instance($i18nModelClass);
         }
@@ -89,13 +90,18 @@ class QueryBuilder
         return $this;
     }
 
-    public function join(string $manyToOneProperty): QueryBuilder
+    public function join(string $manyToOnePropertyName): QueryBuilder
     {
-        $manyToOne = $this->mapper->getForeignKey($manyToOneProperty);
+        $manyToOne = $this->mapper->getForeignKey($manyToOnePropertyName);
 
-        $this->joins[$manyToOneProperty] = $manyToOne->modelName;
+        $this->joins[$manyToOnePropertyName] = $manyToOne->modelName;
 
-        $this->getWhere()->addJoinCondition($this->mapper->getClass(), $manyToOneProperty, $manyToOne->modelName, 'ID');
+        $this->getWhere()->addJoinCondition(
+            $this->mapper->getClass(),
+            $manyToOnePropertyName,
+            $manyToOne->modelName,
+            'ID'
+        );
 
         return $this;
     }
@@ -208,27 +214,34 @@ class QueryBuilder
         return $this->mapper;
     }
 
-    private function getColumnQuery()
+    private function getColumnQuery(): string
     {
-        $columns = $this->mapper->getColumnTableNames();
+        $columns = $this->mapper->getTableColumnNames();
 
         if ($this->i18nMapper) {
-            $columns = array_merge($columns, $this->i18nMapper->getTableColumnNames());
+            $columns = array_merge(array_values($columns), array_values($this->i18nMapper->getTableColumnNames()));
         }
 
-        foreach ($this->joinMappers as $mapper) {
-            $columns = array_merge($columns, $mapper->getTableColumnNames());
+        foreach ($this->joins as $modelName) {
+            $columns = array_merge(
+                array_values($columns),
+                array_values(Mapper::instance($modelName)->getTableColumnNames())
+            );
         }
 
+        foreach ($columns as $k=>$column){
+            $columns[$k]  = "$column as '$column'";
+        }
+        
         return implode(', ', $columns);
     }
 
-    private function getTableQuery()
+    private function getTableQuery(): string
     {
         $tables[] = $this->mapper->getTableName();
 
         foreach ($this->joins as $joinModel) {
-            $tables[] = Mapper::instance($joinModel)->getTableColumnNames();
+            $tables[] = Mapper::instance($joinModel)->getTableName();
         }
 
         $i18nLeftJoinQuery = '';
@@ -250,7 +263,7 @@ class QueryBuilder
     }
 
 
-    private function getWhereQuery()
+    private function getWhereQuery(): string
     {
         $where = '';
 
@@ -286,7 +299,7 @@ class QueryBuilder
         if ($this->count === null) {
             $query = 'SELECT COUNT(*) as number_of_rows ' . $this->getTableQuery() .
                 ' ' . $this->getWhereQuery();
-            
+
             $this->count = Manager::instance()->getAdapter()->fetchValue($query, $this->whereValues);
         }
 
@@ -348,7 +361,7 @@ class QueryBuilder
         return $this->result;
     }
 
-    protected function getObject(string $model, array $row): BaseModel
+    protected function getObject(string $model, stdClass $row): BaseModel
     {
         $mapper = Mapper::instance($model);
 
@@ -366,7 +379,7 @@ class QueryBuilder
         return $object;
     }
 
-    private function setRelatedObjects(BaseModel $object, array $row)
+    private function setRelatedObjects(BaseModel $object, stdClass $row)
     {
         foreach ($this->joins as $property => $modelName) {
             $manyToOne = $this->mapper->getForeignKey($property);
@@ -376,7 +389,7 @@ class QueryBuilder
         }
     }
 
-    private function setI18n(BaseModel $object, array $row)
+    private function setI18n(BaseModel $object, stdClass $row)
     {
         if ($this->i18nMapper) {
             $i18nObject = $this->getObject($this->i18nMapper->getClass(), $row);

@@ -18,6 +18,8 @@ use ReflectionClass;
 use ReflectionException;
 use ReflectionProperty;
 
+use function Symfony\Component\Translation\t;
+
 class Mapper
 {
     /**
@@ -160,7 +162,7 @@ class Mapper
 
         $tableColumnNames = [];
         foreach ($columnNames as $columnName) {
-            $tableColumnNames[$columnName] = $this->getTableColumnName() . '.' . $columnName;
+            $tableColumnNames[$columnName] = $this->getTableName() . '.' . $columnName;
         }
 
         return $tableColumnNames;
@@ -170,7 +172,7 @@ class Mapper
     {
         $tableColumnNames = $this->getTableColumnNames();
 
-        if (isset($tableColumnNames[$name])) {
+        if (!isset($tableColumnNames[$name])) {
             throw new PropertyDoesNotExistException($name, $this->class);
         }
 
@@ -525,5 +527,21 @@ class Mapper
                 }
             }
         }
+    }
+
+    public function isTextProperty($property): bool
+    {
+        $column = $this->getColumn($property);
+        if(in_array($column->type, [
+            'varchar',
+            'tinytext',
+            'text',
+            'mediumtext',
+            'longtext',
+        ])){
+            return true;
+        };
+        
+        return false;
     }
 }

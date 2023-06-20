@@ -18,8 +18,9 @@ interface I18nService
      */
     public function translateCurrentToDefault(string $text): string;
     
-    
     public function needTranslation(): bool;
     
     public function getLanguage(): string;
+    
+    
 }
