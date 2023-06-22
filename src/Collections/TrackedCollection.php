@@ -61,7 +61,7 @@ class TrackedCollection implements ArrayAccess
             $modelClass = get_class($model);
 
             // execute model action before save
-            $model->executeBeforeSave();
+            $model->beforeSave();
 
             // Add the table name and schema data (only once).
             if (!isset($data[$modelClass])) {

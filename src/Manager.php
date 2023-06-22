@@ -219,6 +219,7 @@ class Manager extends Singleton
                         foreach ($values['objects'] as $object) {
                             $object->set('ID', $result->id);
                             $this->track($object);
+                            $object->afterSave();
                             $result->id++;
                         }
                     } // Something went wrong. ROOLBACK;
@@ -298,6 +299,7 @@ class Manager extends Singleton
                     if ($count !== false) {
                         foreach ($values['objects'] as $object) {
                             $this->track($object);
+                            $object->afterSave();
                         }
                     } // Something went wrong. ROOLBACK;
                     else {

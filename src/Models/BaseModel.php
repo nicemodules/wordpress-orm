@@ -337,7 +337,15 @@ abstract class BaseModel
      *  This function is executed right before write object to database
      *  Use for override
      */
-    public function executeBeforeSave()
+    public function beforeSave()
+    {
+    }
+
+    /**
+     *  This function is executed right after write object to database
+     *  Use for override
+     */
+    public function afterSave()
     {
     }
 
