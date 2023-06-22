@@ -4,8 +4,12 @@ namespace NiceModules\ORM\QueryBuilder;
 
 use NiceModules\ORM\Exceptions\InvalidOperatorException;
 use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
+use NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException;
+use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
+use NiceModules\ORM\Exceptions\UnknownColumnTypeException;
 use NiceModules\ORM\Mapper;
 use NiceModules\ORM\QueryBuilder;
+use ReflectionException;
 use Throwable;
 
 class WhereCondition
@@ -16,8 +20,7 @@ class WhereCondition
     protected $value;
     protected string $comparison;
     protected string $operator;
-
-
+    
     /**
      * @param QueryBuilder $queryBuilder
      * @param string $modelClass
@@ -27,14 +30,14 @@ class WhereCondition
      * @param string $operator
      * @throws InvalidOperatorException
      * @throws PropertyDoesNotExistException
-     * @throws \NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException
-     * @throws \NiceModules\ORM\Exceptions\RequiredAnnotationMissingException
-     * @throws \NiceModules\ORM\Exceptions\UnknownColumnTypeException
-     * @throws \ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
+     * @throws ReflectionException
      */
     public function __construct(
         QueryBuilder $queryBuilder,
-        string $modelClass, 
+        string $modelClass,
         string $property,
         $value,
         string $comparison = '=',
@@ -46,13 +49,13 @@ class WhereCondition
         $this->value = $value;
         $this->comparison = $comparison;
         $this->operator = $operator;
-             
-        
+
+
         // Check the property exists.
         if (!Mapper::instance($this->modelClass)->hasColumn($property)) {
             throw new PropertyDoesNotExistException($property, $this->modelClass);
         }
-        
+
         // Check the comparison is valid.
         if (!in_array($this->comparison, [
             '<',
@@ -74,12 +77,12 @@ class WhereCondition
 
         // Check the comparison is valid.
         if (!in_array($operator, [
-           'AND', 'OR'
+            'AND',
+            'OR'
         ])
         ) {
             throw new InvalidOperatorException($this->operator);
         }
-   
     }
 
     /**
@@ -89,9 +92,8 @@ class WhereCondition
      */
     public function build(): string
     {
-        
         $property = Mapper::instance($this->modelClass)->getTableColumnName($this->property);
-        
+
         if (in_array($this->comparison, ['IN', 'NOT IN'])) {
             return $property . ' ' . $this->comparison . ' ' . $this->getValues($this->property, $this->value);
         } else {
@@ -111,11 +113,15 @@ class WhereCondition
      * @param string $property
      * @param $value
      * @return string
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
      */
     protected function getValue(string $property, $value): string
     {
         $this->queryBuilder->addWhereValue($value);
-        
+
         return Mapper::instance($this->modelClass)->getPlaceholder($property);
     }
 
@@ -124,16 +130,20 @@ class WhereCondition
      * @param string $property
      * @param array $values
      * @return string
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
      */
     protected function getValues(string $property, array $values): string
     {
         $placeholders = [];
-        
-        foreach($values as $value){
+
+        foreach ($values as $value) {
             $this->queryBuilder->addWhereValue($value);
             $placeholders[] = Mapper::instance($this->modelClass)->getPlaceholder($property);
         }
-        
-        return '('.implode(', ', $placeholders).')';
+
+        return '(' . implode(', ', $placeholders) . ')';
     }
 }

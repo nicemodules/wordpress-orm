@@ -16,7 +16,7 @@ class Column
     public string $default;
     public ManyToOne $many_to_one;
     public bool $allow_update = true;
-    public bool $i18n = false;
+    public array $custom = [];
 
 
     public function __construct(array $values)
@@ -24,8 +24,8 @@ class Column
         foreach ($values as $name => $value) {
             $this->$name = $value;
         }
-        
-        if($this->type === 'timestamp'){
+
+        if ($this->type === 'timestamp') {
             $this->allow_update = false;
         }
     }

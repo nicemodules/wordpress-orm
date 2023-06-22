@@ -3,7 +3,6 @@
 namespace NiceModules\ORM\Repositories;
 
 use NiceModules\ORM\Exceptions\InvalidOperatorException;
-use NiceModules\ORM\Exceptions\NoQueryException;
 use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
 use NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException;
 use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
@@ -127,8 +126,8 @@ class BaseRepository
     public function findIds(array $ids)
     {
         return $this->createQueryBuilder()
-            ->where('ID',  $ids, 'IN')
-            ->orderBy('ID','ASC')
+            ->where('ID', $ids, 'IN')
+            ->orderBy('ID', 'ASC')
             ->buildQuery()
             ->getResultById();
     }
@@ -177,7 +176,7 @@ class BaseRepository
             ->buildQuery()
             ->getSingleResult();
     }
-    
+
     /**
      * @return Mapper
      */

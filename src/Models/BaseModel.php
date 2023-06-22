@@ -5,7 +5,6 @@ namespace NiceModules\ORM\Models;
 use NiceModules\ORM\Annotations\Column;
 use NiceModules\ORM\Annotations\Table;
 use NiceModules\ORM\Exceptions\InvalidOperatorException;
-use NiceModules\ORM\Exceptions\NoQueryException;
 use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
 use NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException;
 use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
@@ -30,8 +29,6 @@ abstract class BaseModel
      * @var BaseModel[]
      */
     protected array $relatedObjects = [];
-
-    protected BaseModel $i18n;
 
     /**
      * BaseModel constructor.
@@ -173,16 +170,15 @@ abstract class BaseModel
     {
         $values = [];
         foreach (array_keys($this->getColumns()) as $property) {
-            $values[$property] = $this->getTranslated($property);
+            $values[$property] = $this->get($property);
         }
 
-        foreach ($this->relatedObjects as $property => $object) {
-            $values['relatedObjects'][$property] = $object->getAllValues();
+        foreach ($this->relatedObjects as $property => $models) {
+            foreach ($models as $modelName => $object) {
+                $values['relatedObjects'][$property][$modelName] = $object->getAllValues();
+            }
         }
 
-        if (isset($this->i18n)) {
-            $values['i18n'] = $this->i18n->getAllValues();
-        }
 
         return $values;
     }
@@ -208,60 +204,64 @@ abstract class BaseModel
      * Get the raw, underlying value of a property (don't perform a JOIN or lazy
      * loaded database query).
      *
-     * @param $property
-     *
+     * @param string $property
+     * @param string $modelClass
      * @return Object|null
+     * @throws InvalidOperatorException
      * @throws PropertyDoesNotExistException
      * @throws ReflectionException
      * @throws RepositoryClassNotDefinedException
      * @throws RequiredAnnotationMissingException
      * @throws UnknownColumnTypeException
-     * @throws InvalidOperatorException
-     * @throws NoQueryException
      */
-    final public function getObjectRelatedBy($property)
+    final public function getObjectRelatedBy(string $property, string $modelClass): ?BaseModel
     {
-        if (isset($this->relatedObjects[$property])) {
-            return $this->relatedObjects[$property];
+        if (isset($this->relatedObjects[$property][$modelClass])) {
+            return $this->relatedObjects[$property][$modelClass];
         }
 
-        $column = Mapper::instance(get_called_class())->getColumn($property);
+        $manyToOne = Mapper::instance(get_called_class())->getForeignKey($property);
 
         // If this property is a ManyToOne, check to see if it's an object and lazy
         // load it if not.
-        if (isset($column->many_to_one)) {
-            $foreignKey = $this->get($property);
 
-            $orm = Manager::instance();
-            $object_repository = $orm->getRepository($column->many_to_one->modelName);
-            $object = $object_repository->findSingle([$column->many_to_one->propertyName => $foreignKey]);
+        $foreignKey = $this->get($property);
 
-            if ($object) {
-                $this->relatedObjects[$property] = $object;
-                return $object;
-            }
+        $orm = Manager::instance();
+        $object_repository = $orm->getRepository($manyToOne->modelName);
+        $object = $object_repository->findSingle([$manyToOne->propertyName => $foreignKey]);
+
+        if ($object) {
+            $this->relatedObjects[$property][$manyToOne->modelName] = $object;
+            return $object;
         }
 
         return null;
     }
 
-    final public function setObjectRelatedBy($property, $object)
+    /**
+     * @param string $property
+     * @param BaseModel $object
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
+     */
+    final public function setObjectRelatedBy(string $property, BaseModel $object)
     {
         if (!property_exists($this, $property)) {
             throw new PropertyDoesNotExistException($property, get_called_class());
         }
 
-        $column = Mapper::instance(get_called_class())->getColumn($property);
+        $this->relatedObjects[$property][$object->getClassName()] = $object;
 
-        if (!isset($column->many_to_one)) {
-            throw new NotManyToOnePropertyException($property);
+        $column = Mapper::instance($this->getClassName())->getColumn($property);
+
+        if (!isset($column->many_to_one)
+            || (isset($column->many_to_one) && $column->many_to_one->modelName != $object->getClassName())) {
+            return;
         }
-
-        if (!$object instanceof $column->many_to_one->modelName) {
-            throw new NotInstanceOfClassException($column->many_to_one->modelName);
-        }
-
-        $this->relatedObjects[$property] = $object;
 
         if (!isset($this->$property) || (isset($this->$property) && $this->$property !== $object->getId())) {
             $this->$property = $object->getId();
@@ -292,44 +292,11 @@ abstract class BaseModel
     }
 
     /**
-     * @param string $property
-     * @return mixed|void|null
-     * @throws PropertyDoesNotExistException
-     * @throws ReflectionException
-     * @throws RepositoryClassNotDefinedException
-     * @throws RequiredAnnotationMissingException
-     * @throws UnknownColumnTypeException
-     */
-    final public function getTranslated(string $property)
-    {
-        if ($this->needTranslation($property)) {
-            $i18n = $this->getOrCreateI18n();
-
-            if (Mapper::instance(get_called_class())->isTextProperty($property)
-                && $this->get($property)
-                && !$i18n->get($property)) {
-                $i18n->set(
-                    $property,
-                    Manager::instance()->getI18nService()->translateDefaultToCurrent($this->get($property))
-                );
-            }
-
-            return $i18n->get($property);
-        }
-
-        return $this->get($property);
-    }
-
-    /**
      * Get multiple values from this object given an array of properties.
      *
      * @param $columns
      * @return array
      * @throws PropertyDoesNotExistException
-     * @throws ReflectionException
-     * @throws RepositoryClassNotDefinedException
-     * @throws RequiredAnnotationMissingException
-     * @throws UnknownColumnTypeException
      */
     final public function getMultiple($columns): array
     {
@@ -360,22 +327,8 @@ abstract class BaseModel
             throw new PropertyDoesNotExistException($property, get_called_class());
         }
 
-        if ($this->needTranslation($property)) {
-            $i18n = $this->getOrCreateI18n();
-            $i18n->set($property, $value);
-
-            if (Mapper::instance(get_called_class())->isTextProperty($property)) {
-                if (!isset($this->$property) || ($value && empty($this->$property))) {
-                    // Automatically set the object default language translated value if needed
-                    $this->$property = Manager::instance()->getI18nService()->translateCurrentToDefault($value);
-                } elseif (empty($value)) {
-                    $this->$property = $value;
-                }
-            }
-        } else {
-            // Just update the model with the value, if no need translation
-            $this->$property = $value;
-        }
+        // Update the model with the value.
+        $this->$property = $value;
 
         return true;
     }
@@ -396,49 +349,8 @@ abstract class BaseModel
     {
     }
 
-    /**
-     * @param BaseModel $i18n
-     */
-    public function setI18n(BaseModel $i18n): void
+    public function getClassName(): string
     {
-        $this->i18n = $i18n;
-    }
-
-    /**
-     * @return BaseModel|null
-     */
-    public function getI18n(): ?BaseModel
-    {
-        if (!isset($this->i18n)) {
-            return null;
-        }
-
-        return $this->i18n;
-    }
-
-
-    protected function getOrCreateI18n(): BaseModel
-    {
-        if (!isset($this->i18n)) {
-            $i8nClassName = get_called_class() . 'I18n';
-            $this->i18n = new $i8nClassName();
-
-            if ($this->getId()) {
-                $this->i18n->set('object_id', $this->getId());
-                Manager::instance()->persist($this->i18n);
-            }
-
-            $this->i18n->set('language', Manager::instance()->getI18nService()->getLanguage());
-        }
-
-        return $this->getI18n();
-    }
-
-    public function needTranslation($property): bool
-    {
-        $column = Mapper::instance(get_called_class())->getColumn($property);
-
-        return $column->i18n && Manager::instance()->getI18nService() && Manager::instance()->getI18nService(
-            )->needTranslation();
+        return get_called_class();
     }
 }

@@ -2,12 +2,10 @@
 
 namespace NiceModules\Tests\ORM;
 
-use NiceModules\ORM\Logger;
 use NiceModules\ORM\Manager;
 use NiceModules\ORM\Mapper;
 use NiceModules\ORM\Models\Test\Bar;
 use NiceModules\ORM\Models\Test\Foo;
-use NiceModules\ORM\Models\Test\FooI18n;
 use NiceModules\ORM\Repositories\Test\FooRepository;
 use PHPUnit\Framework\TestCase;
 
@@ -27,22 +25,21 @@ class ManagerTest extends TestCase
     }
 
     /**
-     * 
+     *
      */
     public function testPersist()
     {
         Mapper::instance(Bar::class)->updateSchema();
         Mapper::instance(Foo::class)->updateSchema();
-        Mapper::instance(FooI18n::class)->updateSchema();
 
         $bars = Manager::instance()->getRepository(Bar::class)->findAll();
-        
-        foreach ($bars as $bar){
+
+        foreach ($bars as $bar) {
             Manager::instance()->remove($bar);
         }
 
         Manager::instance()->flush();
-        
+
         $unique = uniqid('B', true);
         $number = 10;
 
@@ -55,11 +52,11 @@ class ManagerTest extends TestCase
         }
 
         Manager::instance()->flush();
-        
+
         /** @var Bar $bars */
-        foreach ($bars as $bar){
+        foreach ($bars as $bar) {
             $foo = new Foo();
-            $foo->set('name', 'FOO BAR '.$bar->get('name'));
+            $foo->set('name', 'FOO BAR ' . $bar->get('name'));
             $foo->set('bar_ID', $bar->getId());
             Manager::instance()->persist($foo);
         }
@@ -73,16 +70,17 @@ class ManagerTest extends TestCase
         $foos = Manager::instance()
             ->getRepository(Foo::class)
             ->createQueryBuilder()
-            ->join('bar_ID')
+            ->joinObjectRelatedBy('bar_ID')
             ->buildQuery()
             ->getResult();
 
-
-        
-        foreach ($foos as $foo){
-            $this->assertInstanceOf(Bar::class,$foo->getObjectRelatedBy('bar_ID'));
+        foreach ($foos as $foo) {
+            $this->assertInstanceOf(
+                Bar::class,
+                $foo->getObjectRelatedBy('bar_ID', Bar::class)
+            );
         }
-        
+
         $this->assertEquals($number, count($bars));
         $this->assertEquals($number, count($foos));
     }
@@ -95,13 +93,13 @@ class ManagerTest extends TestCase
             $this->assertInstanceOf(Bar::class, $bar);
             Manager::instance()->remove($bar);
         }
-        
+
         Manager::instance()->flush();
 
         $barsRepository = Manager::instance()->getRepository(Bar::class);
         $bars = $barsRepository->findAll();
         $foos = Manager::instance()->getRepository(Foo::class)->findAll();
-        
+
         $this->assertEquals(0, count($bars));
         $this->assertEquals(0, count($foos));
     }

@@ -4,8 +4,12 @@ namespace NiceModules\ORM\QueryBuilder;
 
 use NiceModules\ORM\Exceptions\InvalidOperatorException;
 use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
+use NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException;
+use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
+use NiceModules\ORM\Exceptions\UnknownColumnTypeException;
 use NiceModules\ORM\Mapper;
 use NiceModules\ORM\QueryBuilder;
+use ReflectionException;
 
 class WhereJoinCondition implements Condition
 {
@@ -23,15 +27,16 @@ class WhereJoinCondition implements Condition
      * @param QueryBuilder $queryBuilder
      * @param string $modelClass
      * @param string $property
-     * @param $value
+     * @param string $joinModelClass
+     * @param string $joinProperty
      * @param string $comparison
      * @param string $operator
      * @throws InvalidOperatorException
      * @throws PropertyDoesNotExistException
-     * @throws \NiceModules\ORM\Exceptions\RepositoryClassNotDefinedException
-     * @throws \NiceModules\ORM\Exceptions\RequiredAnnotationMissingException
-     * @throws \NiceModules\ORM\Exceptions\UnknownColumnTypeException
-     * @throws \ReflectionException
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
      */
     public function __construct(
         QueryBuilder $queryBuilder,
@@ -82,7 +87,8 @@ class WhereJoinCondition implements Condition
 
         // Check the comparison is valid.
         if (!in_array($operator, [
-            'AND', 'OR'
+            'AND',
+            'OR'
         ])
         ) {
             throw new InvalidOperatorException($this->operator);
@@ -91,11 +97,14 @@ class WhereJoinCondition implements Condition
 
     /**
      * @return string
-     * @throws PropelException
+     * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
+     * @throws RepositoryClassNotDefinedException
+     * @throws RequiredAnnotationMissingException
+     * @throws UnknownColumnTypeException
      */
     public function build(): string
     {
-
         $property = Mapper::instance($this->modelClass)->getTableColumnName($this->property);
         $joinProperty = Mapper::instance($this->joinModelClass)->getTableColumnName($this->joinProperty);
 

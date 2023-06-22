@@ -28,16 +28,16 @@ class Logger extends Singleton
         if (is_object($something) || is_array($something)) {
             $something = print_r($something, 1);
         }
-        
-        if($addBacktraceChain && $this->logBacktraceChain){
-            $something.= PHP_EOL . $this->getBacktraceChain();
+
+        if ($addBacktraceChain && $this->logBacktraceChain) {
+            $something .= PHP_EOL . $this->getBacktraceChain();
         }
-        
+
         $logEntry = date('Y-m-d H:i:s') . ' [' . $this->getCurrentTime() . '] => ' . $something;
-        
+
         $this->log[] = $logEntry;
-        
-        if($this->showEnabled){
+
+        if ($this->showEnabled) {
             print(PHP_EOL);
             print($logEntry);
             print(PHP_EOL);
@@ -68,6 +68,14 @@ class Logger extends Singleton
     }
 
     /**
+     * @return bool
+     */
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
+    }
+
+    /**
      * @param bool $enabled
      */
     public function setEnabled(bool $enabled): void
@@ -75,38 +83,39 @@ class Logger extends Singleton
         $this->enabled = $enabled;
     }
 
-    /**
-     * @return bool
-     */
-    public function isEnabled(): bool
+    public function getBacktraceChain()
     {
-        return $this->enabled;
-    }
-    
-    public function getBacktraceChain(){
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
 
         $backtrace = array_reverse($backtrace);
-        
+
         $backtraceData = [];
-        
+
         $niceModules = 'NiceModules\\';
-        
-        foreach ($backtrace as $data){
-            if(!isset($data['class'])){
+
+        foreach ($backtrace as $data) {
+            if (!isset($data['class'])) {
                 continue;
             }
-            
-            if(strpos($data['class'], $niceModules) === false || strpos($data['class'], '\ORM\Logger') !== false){
+
+            if (strpos($data['class'], $niceModules) === false || strpos($data['class'], '\ORM\Logger') !== false) {
                 continue;
             }
 
             $data['class'] = str_replace($niceModules, '', $data['class']);
 
-            $backtraceData[] = $data['class'].$data['type'].$data['function']; 
+            $backtraceData[] = $data['class'] . $data['type'] . $data['function'];
         }
-        
-        return implode(PHP_EOL."\t". '=> ',  $backtraceData);
+
+        return implode(PHP_EOL . "\t" . '=> ', $backtraceData);
+    }
+
+    /**
+     * @return bool
+     */
+    public function isShowEnabled(): bool
+    {
+        return $this->showEnabled;
     }
 
     /**
@@ -120,9 +129,9 @@ class Logger extends Singleton
     /**
      * @return bool
      */
-    public function isShowEnabled(): bool
+    public function isLogBacktraceChain(): bool
     {
-        return $this->showEnabled;
+        return $this->logBacktraceChain;
     }
 
     /**
@@ -131,13 +140,5 @@ class Logger extends Singleton
     public function setLogBacktraceChain(bool $logBacktraceChain): void
     {
         $this->logBacktraceChain = $logBacktraceChain;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isLogBacktraceChain(): bool
-    {
-        return $this->logBacktraceChain;
     }
 }

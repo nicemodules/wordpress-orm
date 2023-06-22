@@ -2,7 +2,6 @@
 
 namespace NiceModules\ORM\QueryBuilder;
 
-use http\Encoding\Stream\Inflate;
 use NiceModules\ORM\QueryBuilder;
 use Throwable;
 
@@ -31,9 +30,21 @@ class Where implements Condition
      * @return Where
      * @throws Throwable
      */
-    public function addCondition(string $modelClass, string $property, $value, string $comparison = '=', string $operator = 'AND')
-    {
-        $this->conditions[] = new WhereCondition($this->queryBuilder, $modelClass, $property, $value, $comparison, $operator);
+    public function addCondition(
+        string $modelClass,
+        string $property,
+        $value,
+        string $comparison = '=',
+        string $operator = 'AND'
+    ) {
+        $this->conditions[] = new WhereCondition(
+            $this->queryBuilder,
+            $modelClass,
+            $property,
+            $value,
+            $comparison,
+            $operator
+        );
         return $this;
     }
 
@@ -47,18 +58,32 @@ class Where implements Condition
      * @return $this
      * @throws Throwable
      */
-    public function addJoinCondition(string $modelClass, string $property, string $joinModelClass, string $joinProperty, string $comparison = '=', string $operator = 'AND')
-    {
-        $this->conditions[] = new WhereJoinCondition($this->queryBuilder, $modelClass, $property, $joinModelClass, $joinProperty, $comparison, $operator);
+    public function addJoinCondition(
+        string $modelClass,
+        string $property,
+        string $joinModelClass,
+        string $joinProperty,
+        string $comparison = '=',
+        string $operator = 'AND'
+    ) {
+        $this->conditions[] = new WhereJoinCondition(
+            $this->queryBuilder,
+            $modelClass,
+            $property,
+            $joinModelClass,
+            $joinProperty,
+            $comparison,
+            $operator
+        );
         return $this;
     }
-    
+
     /**
      * @param Where $builder
      * @param string $operator
      * @return Where
      */
-    public function addWhere(Where $builder, string $operator = 'AND')
+    public function addWhere(Where $builder, string $operator = 'AND'): Where
     {
         $this->conditions[] = $builder;
         $builder->setOperator($operator);

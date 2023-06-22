@@ -23,7 +23,6 @@ class Manager extends Singleton
      */
     private TrackedCollection $tracked;
     private DatabaseAdapter $adapter;
-    private ?I18nService $i18nService = null;
 
 
     /**
@@ -48,11 +47,6 @@ class Manager extends Singleton
 //                }
 //                break;
 //        }
-    }
-
-    public function setI18nService(I18nService $i18nService)
-    {
-        $this->i18nService = $i18nService;
     }
 
     /**
@@ -165,13 +159,6 @@ class Manager extends Singleton
         return $this;
     }
 
-    /**
-     * @return I18nService|null
-     */
-    public function getI18nService(): ?I18nService
-    {
-        return $this->i18nService;
-    }
 
     /**
      * Add new objects to the database.
@@ -231,12 +218,6 @@ class Manager extends Singleton
                         /** @var BaseModel $object */
                         foreach ($values['objects'] as $object) {
                             $object->set('ID', $result->id);
-                            
-                            if($object->getI18n()){
-                                $object->getI18n()->set('object_id', $object->getId());
-                                $this->persist($object->getI18n());
-                            }
-                           
                             $this->track($object);
                             $result->id++;
                         }
@@ -250,12 +231,11 @@ class Manager extends Singleton
                     throw $e;
                 }
             }
-            
+
             //if flush generated insert objects, flush them again
-            if($this->tracked->getInsertUpdateTableData('getPersistedObjects')){
+            if ($this->tracked->getInsertUpdateTableData('getPersistedObjects')) {
                 $this->_flush_insert();
             }
-            
         }
     }
 

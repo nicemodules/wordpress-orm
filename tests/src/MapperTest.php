@@ -11,7 +11,7 @@ use NiceModules\ORM\Mapper;
 use NiceModules\ORM\Models\Test\Bar;
 use NiceModules\ORM\Models\Test\Baz;
 use NiceModules\ORM\Models\Test\Foo;
-use NiceModules\ORM\Models\Test\FooI18n;
+
 use PHPUnit\Framework\TestCase;
 
 
@@ -91,7 +91,6 @@ class MapperTest extends TestCase
     {
         global $wpdb;
         $mapper = Mapper::instance(Foo::class);
-        Mapper::instance(FooI18n::class)->updateSchema();
         $mapper->updateSchema();
 
         $result = $wpdb->get_results('SHOW CREATE TABLE ' . $mapper->getTableName());
@@ -120,7 +119,6 @@ class MapperTest extends TestCase
     public function testDropTable()
     {
         global $wpdb;
-        Mapper::instance(FooI18n::class)->dropTable();
         $mapper = Mapper::instance(Foo::class);
         $mapper->dropTable();
         $result = $wpdb->get_results('SHOW TABLES LIKE "' . $mapper->getTableName() . '"');

@@ -105,7 +105,7 @@ class WpDbAdapter implements DatabaseAdapter
                 $indexes[] = 'INDEX ' . $index->name . ' (' . implode(',', $index->columns) . ')';
             }
 
-            $indexesSql = ', ' . PHP_EOL  . implode(', ' . PHP_EOL, $indexes);
+            $indexesSql = ', ' . PHP_EOL . implode(', ' . PHP_EOL, $indexes);
         }
 
         $sql = "CREATE TABLE " . $mapper->getTableName() . " (" .
@@ -113,7 +113,7 @@ class WpDbAdapter implements DatabaseAdapter
             $primaryKeysSql .
             $indexesSql . PHP_EOL .
             ")" . PHP_EOL . $charset_collate . ';';
-        
+
         Logger::instance()->log('DbDeltaSql: ' . $sql);
 
         // Use dbDelta to do all the hard work.

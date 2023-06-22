@@ -18,8 +18,6 @@ use ReflectionClass;
 use ReflectionException;
 use ReflectionProperty;
 
-use function Symfony\Component\Translation\t;
-
 class Mapper
 {
     /**
@@ -295,6 +293,22 @@ class Mapper
         return $this->updateColumns;
     }
 
+    public function isTextProperty($property): bool
+    {
+        $column = $this->getColumn($property);
+        if (in_array($column->type, [
+            'varchar',
+            'tinytext',
+            'text',
+            'mediumtext',
+            'longtext',
+        ])) {
+            return true;
+        }
+
+        return false;
+    }
+
     /**
      * Inherited model properties needs to be sorted in schema
      */
@@ -527,21 +541,5 @@ class Mapper
                 }
             }
         }
-    }
-
-    public function isTextProperty($property): bool
-    {
-        $column = $this->getColumn($property);
-        if(in_array($column->type, [
-            'varchar',
-            'tinytext',
-            'text',
-            'mediumtext',
-            'longtext',
-        ])){
-            return true;
-        };
-        
-        return false;
     }
 }

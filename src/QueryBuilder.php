@@ -15,17 +15,14 @@ class QueryBuilder
     const ORDER_ASC = 'ASC';
     const ORDER_DESC = 'DESC';
 
-    /**
-     * @var Mapper[]
-     */
     private array $joins = [];
+    private array $leftJoins = [];
     /**
      * @var Where[]
      */
-    private array $leftJoinsWhere = [];
+    private array $leftJoinWhere = [];
     private array $ids = [];
     private string $query;
-    private string $whereQuery;
     private ?Where $where;
     private array $whereValues = [];
     private array $orderBy = [];
@@ -46,8 +43,6 @@ class QueryBuilder
      */
     private BaseRepository $repository;
     private Mapper $mapper;
-    private ?I18nService $i18nService;
-    private ?Mapper $i18nMapper = null;
 
     /**
      * QueryBuilder constructor.
@@ -62,13 +57,6 @@ class QueryBuilder
         // And store the sent repository.
         $this->repository = $repository;
         $this->mapper = $this->repository->getMapper();
-
-        $this->i18nService = Manager::instance()->getI18nService();
-
-        if ($this->mapper->getTable()->i18n && $this->i18nService && $this->i18nService->needTranslation()) {
-            $i18nModelClass = $this->mapper->getClass() . 'I18n';
-            $this->i18nMapper = Mapper::instance($i18nModelClass);
-        }
     }
 
     /**
@@ -90,37 +78,82 @@ class QueryBuilder
         return $this;
     }
 
-    public function join(string $manyToOnePropertyName): QueryBuilder
+    public function joinObjectRelatedBy(string $manyToOnePropertyName): QueryBuilder
     {
         $manyToOne = $this->mapper->getForeignKey($manyToOnePropertyName);
 
-        $this->joins[$manyToOnePropertyName] = $manyToOne->modelName;
-
-        $this->getWhere()->addJoinCondition(
-            $this->mapper->getClass(),
+        $this->join(
             $manyToOnePropertyName,
             $manyToOne->modelName,
-            'ID'
+            $manyToOne->propertyName
         );
 
         return $this;
     }
 
-    public function leftJoin(string $manyToOneProperty): QueryBuilder
+    public function join(
+        string $property,
+        string $joinModelClass,
+        string $joinProperty,
+        string $comparison = '=',
+        string $operator = 'AND'
+    ): QueryBuilder {
+        $this->joins[$property] = $joinModelClass;
+
+        $this->getWhere()->addJoinCondition(
+            $this->mapper->getClass(),
+            $property,
+            $joinModelClass,
+            $joinProperty,
+            $comparison,
+            $operator
+        );
+
+        return $this;
+    }
+
+    public function leftJoinObjectRelatedBy(string $manyToOnePropertyName): QueryBuilder
     {
-        $manyToOne = $this->mapper->getForeignKey($manyToOneProperty);
-        $where = new Where($this);
-        $where->addJoinCondition($this->mapper->getClass(), 'ID', $manyToOne->modelName, $manyToOneProperty);
-        $this->leftJoinsWhere[$manyToOneProperty] = $where;
+        $manyToOne = $this->mapper->getForeignKey($manyToOnePropertyName);
+
+        $this->leftJoin(
+            $manyToOnePropertyName,
+            $manyToOne->modelName,
+            $manyToOne->propertyName
+        );
+
+        return $this;
+        return $this;
+    }
+
+    public function leftJoin(
+        string $property,
+        string $joinModelClass,
+        string $joinProperty,
+        string $comparison = '=',
+        string $operator = 'AND'
+    ): QueryBuilder {
+        $this->leftJoins[$property] = $joinModelClass;
+        $where = $this->getLeftJoinWhere($property);
+        $where->addJoinCondition(
+            $this->mapper->getClass(),
+            $property,
+            $joinModelClass,
+            $joinProperty,
+            $comparison,
+            $operator
+        );
+
         return $this;
     }
 
     public function getLeftJoinWhere($property): Where
     {
-        if (!isset($this->leftJoinsWhere[$property])) {
-            throw new PropertyDoesNotExistException($property, $this->mapper->getClass());
+        if (!isset($this->leftJoinWhere[$property])) {
+            $this->leftJoinWhere[$property] = new Where($this);
         }
-        return $this->leftJoinsWhere[$property];
+
+        return $this->leftJoinWhere[$property];
     }
 
     /**
@@ -214,87 +247,7 @@ class QueryBuilder
         return $this->mapper;
     }
 
-    private function getColumnQuery(): string
-    {
-        $columns = $this->mapper->getTableColumnNames();
-
-        if ($this->i18nMapper) {
-            $columns = array_merge(array_values($columns), array_values($this->i18nMapper->getTableColumnNames()));
-        }
-
-        foreach ($this->joins as $modelName) {
-            $columns = array_merge(
-                array_values($columns),
-                array_values(Mapper::instance($modelName)->getTableColumnNames())
-            );
-        }
-
-        foreach ($columns as $k=>$column){
-            $columns[$k]  = "$column as '$column'";
-        }
-        
-        return implode(', ', $columns);
-    }
-
-    private function getTableQuery(): string
-    {
-        $tables[] = $this->mapper->getTableName();
-
-        foreach ($this->joins as $joinModel) {
-            $tables[] = Mapper::instance($joinModel)->getTableName();
-        }
-
-        $i18nLeftJoinQuery = '';
-        if ($this->i18nMapper) {
-            $where = new Where($this);
-            $where->addJoinCondition($this->mapper->getClass(), 'ID', $this->i18nMapper->getClass(), 'object_id');
-            $where->addCondition($this->i18nMapper->getClass(), 'language', $this->i18nService->getLanguage());
-            $i18nLeftJoinQuery = ' LEFT OUTER JOIN ' . $this->i18nMapper->getTableName() . ' ON ' . $where->build();
-        }
-
-        $leftJoinsQueries = [];
-        foreach ($this->leftJoinsWhere as $property => $where) {
-            $manyToOne = $this->mapper->getForeignKey($property);
-            $leftJoinsQueries[] = 'LEFT OUTER JOIN ' . Mapper::instance($manyToOne->modelName)->getTableName(
-                ) . ' ON ' . $where->build();
-        }
-
-        return 'FROM (' . implode(', ', $tables) . ')' . $i18nLeftJoinQuery . ' ' . implode(' ', $leftJoinsQueries);
-    }
-
-
-    private function getWhereQuery(): string
-    {
-        $where = '';
-
-        if ($this->where !== null) {
-            $where .= 'WHERE ' . $this->where->build();
-        }
-
-        return $where;
-    }
-
-    private function getOrderQuery()
-    {
-        $orderQuery = '';
-
-        if ($this->orderBy) {
-            $orderQuery .= 'ORDER BY ' . implode(', ', $this->orderBy);
-        }
-
-        return $orderQuery;
-    }
-
-    private function getLimitQuery()
-    {
-        $query = '';
-        if ($this->limit) {
-            $query .= $this->limit;
-        }
-        return $query;
-    }
-
-    public function getCount()
+    public function getCount(): int
     {
         if ($this->count === null) {
             $query = 'SELECT COUNT(*) as number_of_rows ' . $this->getTableQuery() .
@@ -303,7 +256,7 @@ class QueryBuilder
             $this->count = Manager::instance()->getAdapter()->fetchValue($query, $this->whereValues);
         }
 
-        return $this->count;
+        return (int)$this->count;
     }
 
     /**
@@ -313,7 +266,6 @@ class QueryBuilder
     {
         return $this->ids;
     }
-
 
     public function getRawResult(): array
     {
@@ -350,7 +302,6 @@ class QueryBuilder
                 $this->result[] = $object;
 
                 $this->setRelatedObjects($object, $row);
-                $this->setI18n($object, $row);
             }
         }
 
@@ -359,43 +310,6 @@ class QueryBuilder
         }
 
         return $this->result;
-    }
-
-    protected function getObject(string $model, stdClass $row): BaseModel
-    {
-        $mapper = Mapper::instance($model);
-
-        /** @var BaseModel $object */
-        $object = new $model();
-
-        foreach ($row as $tableColumn => $value) {
-            // if result has custom columns ignore them here for now
-            if ($mapper->hasTableColumnName($tableColumn)) {
-                $property = $mapper->getTableColumnNameProperty($tableColumn);
-                $object->set($property, $value);
-            }
-        }
-
-        return $object;
-    }
-
-    private function setRelatedObjects(BaseModel $object, stdClass $row)
-    {
-        foreach ($this->joins as $property => $modelName) {
-            $manyToOne = $this->mapper->getForeignKey($property);
-            $relatedObject = $this->getObject($manyToOne->modelName, $row);
-            $object->setObjectRelatedBy($property, $relatedObject);
-            Manager::instance()->track($relatedObject);
-        }
-    }
-
-    private function setI18n(BaseModel $object, stdClass $row)
-    {
-        if ($this->i18nMapper) {
-            $i18nObject = $this->getObject($this->i18nMapper->getClass(), $row);
-            $object->setI18n($i18nObject);
-            Manager::instance()->track($i18nObject);
-        }
     }
 
     /**
@@ -501,5 +415,107 @@ class QueryBuilder
     public function getWhereValues(): array
     {
         return $this->whereValues;
+    }
+
+    protected function getObject(string $model, stdClass $row): BaseModel
+    {
+        $mapper = Mapper::instance($model);
+
+        /** @var BaseModel $object */
+        $object = new $model();
+
+        foreach ($row as $tableColumn => $value) {
+            // if result has custom columns ignore them here for now
+            if ($mapper->hasTableColumnName($tableColumn)) {
+                $property = $mapper->getTableColumnNameProperty($tableColumn);
+                $object->set($property, $value);
+            }
+        }
+
+        return $object;
+    }
+
+    private function getColumnQuery(): string
+    {
+        $columns = $this->mapper->getTableColumnNames();
+
+        foreach ($this->joins as $modelName) {
+            $columns = array_merge(
+                array_values($columns),
+                array_values(Mapper::instance($modelName)->getTableColumnNames())
+            );
+        }
+
+        foreach ($columns as $k => $column) {
+            $columns[$k] = "$column as '$column'";
+        }
+
+        return implode(', ', $columns);
+    }
+
+    private function getTableQuery(): string
+    {
+        $tables[] = $this->mapper->getTableName();
+
+        foreach ($this->joins as $joinModel) {
+            $tables[] = Mapper::instance($joinModel)->getTableName();
+        }
+
+        $leftJoinsQueries = [];
+
+        foreach ($this->leftJoinWhere as $property => $where) {
+            $manyToOne = $this->mapper->getForeignKey($property);
+
+            $leftJoinsQueries[] = 'LEFT OUTER JOIN ' . Mapper::instance($manyToOne->modelName)->getTableName(
+                ) . ' ON ' . $where->build();
+        }
+
+        return 'FROM (' . implode(', ', $tables) . ') ' . implode(' ', $leftJoinsQueries);
+    }
+
+    private function getWhereQuery(): string
+    {
+        $where = '';
+
+        if ($this->where !== null) {
+            $where .= 'WHERE ' . $this->where->build();
+        }
+
+        return $where;
+    }
+
+    private function getOrderQuery(): string
+    {
+        $orderQuery = '';
+
+        if ($this->orderBy) {
+            $orderQuery .= 'ORDER BY ' . implode(', ', $this->orderBy);
+        }
+
+        return $orderQuery;
+    }
+
+    private function getLimitQuery(): string
+    {
+        $query = '';
+        if ($this->limit) {
+            $query .= $this->limit;
+        }
+        return $query;
+    }
+
+    private function setRelatedObjects(BaseModel $object, stdClass $row)
+    {
+        foreach ($this->joins as $property => $modelName) {
+            $relatedObject = $this->getObject($modelName, $row);
+            $object->setObjectRelatedBy($property, $relatedObject);
+            Manager::instance()->track($relatedObject);
+        }
+
+        foreach ($this->leftJoins as $property => $modelName) {
+            $relatedObject = $this->getObject($modelName, $row);
+            $object->setObjectRelatedBy($property, $relatedObject);
+            Manager::instance()->track($relatedObject);
+        }
     }
 }

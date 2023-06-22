@@ -19,8 +19,7 @@ use NiceModules\ORM\Models\BaseModel;
  *     indexes={@Index(name="name_index", columns={"name"})},
  *     repository="NiceModules\ORM\Repositories\Test\FooRepository",
  *     column_order={"ID", "date_add", "date_update"},
- *     inherits="NiceModules\ORM\Models\BaseModel",
- *     i18n=true
+ *     inherits="NiceModules\ORM\Models\BaseModel"
  *     )
  */
 class Foo extends BaseModel
@@ -44,24 +43,24 @@ class Foo extends BaseModel
      *     )
      */
     protected int $bar_ID;
-    
+
     /**
-     * @Column(type="varchar", length="25", i18n=true)
+     * @Column(type="varchar", length="25")
      * @var string
      */
     protected string $name;
 
     /**
-     * @Column(type="varchar", length="50", i18n=true)
+     * @Column(type="varchar", length="50")
      * @var string
      */
     protected string $description;
-    
+
     public function executeBeforeSave()
     {
         parent::executeBeforeSave();
-        
-        if(!$this->hasId()){ // is object new?
+
+        if (!$this->hasId()) { // is object new?
             $this->date_add = date('Y-m-d H:i:s');
         }
     }

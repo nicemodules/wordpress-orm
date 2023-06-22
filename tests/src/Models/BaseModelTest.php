@@ -2,15 +2,11 @@
 
 namespace NiceModules\Tests\ORM\Models;
 
-use Cassandra\Map;
-use NiceModules\ORM\Exceptions\RequiredAnnotationMissingException;
-use NiceModules\ORM\I18nService;
 use NiceModules\ORM\Manager;
 use NiceModules\ORM\Mapper;
 use NiceModules\ORM\Models\BaseModel;
 use NiceModules\ORM\Models\Test\Bar;
 use NiceModules\ORM\Models\Test\Foo;
-use NiceModules\ORM\Models\Test\FooI18n;
 use PHPUnit\Framework\TestCase;
 
 class BaseModelTest extends TestCase
@@ -99,16 +95,15 @@ class BaseModelTest extends TestCase
         // create bar table if not exsist
         Mapper::instance(Bar::class)->updateSchema();
         Mapper::instance(Foo::class)->updateSchema();
-        Mapper::instance(FooI18n::class)->updateSchema();
-        
+
         $orm = Manager::instance();
-        
+
         $bar = new Bar();
         $bar->set('name', 'Foo bar');
         $orm->persist($bar);
 
         $orm->flush();
-        
+
         $foo = new Foo();
         $foo->setObjectRelatedBy('bar_ID', $bar);
         $orm->persist($foo);
@@ -118,10 +113,12 @@ class BaseModelTest extends TestCase
         // query db for object
         /** @var Foo $fooFromDb */
         $fooFromDb = $orm->getRepository(Foo::class)->find($foo->getId());
-        
-        $this->assertEquals($bar->getId(), $fooFromDb->getObjectRelatedBy('bar_ID')->getId());
+
+        $this->assertEquals(
+            $bar->getId(),
+            $fooFromDb->getObjectRelatedBy('bar_ID', Bar::class)->getId()
+        );
         $orm->clean($fooFromDb);
-        Mapper::instance(FooI18n::class)->dropTable();
         Mapper::instance(Foo::class)->dropTable();
     }
 
@@ -154,48 +151,4 @@ class BaseModelTest extends TestCase
         $this->assertIsString($foo->getHash());
     }
     
-    public function testGetI18h(){
-        Mapper::instance(Foo::class)->updateSchema();
-        Mapper::instance(FooI18n::class)->updateSchema();
-        
-        $i18nService = $this->createMock(I18nService::class);
-        
-        $i18nService->expects($this->atLeastOnce())
-            ->method('needTranslation')
-            ->willReturn(true);
-
-        $i18nService->expects($this->any())
-            ->method('translateDefaultToCurrent')
-            ->willReturn('Próba mikrofonu');
-        
-        $i18nService->expects($this->atLeastOnce())
-            ->method('translateCurrentToDefault')
-            ->willReturn('Microphone test');
-        
-         $i18nService->expects($this->atLeastOnce())
-            ->method('getLanguage')
-            ->willReturn('PL');
-        
-        Manager::instance()->setI18nService($i18nService);
-
-
-        $bar = new Bar();
-        Manager::instance()->persist($bar);
-        Manager::instance()->flush();
-        
-        $foo = new Foo();
-        $foo->set('name', 'Próba mikrofonu');
-        $foo->setObjectRelatedBy('bar_ID', $bar);
-        
-        Manager::instance()->persist($foo);
-        Manager::instance()->flush();
-        
-        print_r(PHP_EOL.'___3:'.PHP_EOL);
-        print_r($foo);
-        print_r(PHP_EOL);
-        
-        $this->assertEquals($foo->get('name'), 'Microphone test');
-        $this->assertEquals($foo->getTranslated('name'), 'Próba mikrofonu');
-        $this->assertEquals($foo->getI18n()->get('name'), 'Próba mikrofonu');
-    }
 }
