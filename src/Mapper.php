@@ -6,7 +6,7 @@ use Doctrine\Common\Annotations\AnnotationReader;
 use NiceModules\ORM\Annotations\Column;
 use NiceModules\ORM\Annotations\ManyToOne;
 use NiceModules\ORM\Annotations\Table;
-use NiceModules\ORM\Exceptions\AllowDropIsFalseException;
+use NiceModules\ORM\Exceptions\AllowTruncateIsFalseException;
 use NiceModules\ORM\Exceptions\AllowSchemaUpdateIsFalseException;
 use NiceModules\ORM\Exceptions\IncompleteIndexException;
 use NiceModules\ORM\Exceptions\IncompleteManyToOneException;
@@ -252,6 +252,11 @@ class Mapper
         return $this->foreignKeys[$name];
     }
 
+    public function hasForeignKey($name): bool
+    {
+        return isset($this->foreignKeys[$name]);
+    }
+
     /**
      * Compares a database table schema to the model schema (as defined in th
      * annotations). If there are any differences, the database schema is modified to
@@ -265,7 +270,7 @@ class Mapper
     }
 
     /**
-     * @throws AllowDropIsFalseException
+     * @throws AllowTruncateIsFalseException
      * @throws AllowSchemaUpdateIsFalseException
      */
     public function dropTable()
@@ -277,13 +282,31 @@ class Mapper
 
         // Additional protection before drop
         if (!$this->table->allow_drop) {
-            throw new AllowDropIsFalseException($this->class);
+            throw new AllowTruncateIsFalseException($this->class);
         }
 
         // Drop the table.
         $sql = "DROP TABLE IF EXISTS " . $this->getPrefix() . $this->table->name;
         Manager::instance()->getAdapter()->execute($sql);
     }
+
+    public function truncateTable()
+    {
+        // Are we allowed to update the schema of this model in the db?
+        if (!$this->table->allow_schema_update) {
+            throw new AllowSchemaUpdateIsFalseException($this->class);
+        }
+
+        // Additional protection before truncate
+        if (!$this->table->allow_truncate) {
+            throw new AllowTruncateIsFalseException($this->class);
+        }
+
+        // Drop the table.
+        $sql = "TRUNCATE TABLE " . $this->getPrefix() . $this->table->name;
+        Manager::instance()->getAdapter()->execute($sql);
+    }
+    
 
     /**
      * @return Column[]

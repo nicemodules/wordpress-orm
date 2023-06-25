@@ -7,9 +7,9 @@ namespace NiceModules\ORM\Exceptions;
  *
  * @package NiceModules\ORM
  */
-class AllowDropIsFalseException extends ErrorArgsException
+class AllowTruncateIsFalseException extends ErrorArgsException
 {
-    protected string $error = 'Refused to drop table for model %s. allow_drop is FALSE.';
+    protected string $error = 'Refused to truncate table for model %s. allow_truncate is FALSE.';
 
     /**
      * @param string $className

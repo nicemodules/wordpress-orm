@@ -233,8 +233,9 @@ class Manager extends Singleton
                 }
             }
 
-            //if flush generated insert objects, flush them again
-            if ($this->tracked->getInsertUpdateTableData('getPersistedObjects')) {
+            //if flush generated objects, flush them again
+            //if flush generated objects, flush them again
+            if ($this->tracked->getInsertUpdateTableData('getPersistedObjects')){
                 $this->_flush_insert();
             }
         }
@@ -309,6 +310,14 @@ class Manager extends Singleton
                     $this->getAdapter()->execute('ROLLBACK;');
                     throw $e;
                 }
+            }
+
+            //if flush generated objects, flush them again
+            if ($this->tracked->getInsertUpdateTableData('getPersistedObjects')){
+                $this->_flush_insert();
+            }
+            if($this->tracked->getInsertUpdateTableData('getChangedObjects')) {
+                $this->_flush_update();
             }
         }
     }

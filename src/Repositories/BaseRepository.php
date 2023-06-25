@@ -147,11 +147,13 @@ class BaseRepository
      */
     public function findBy(array $criteria): array
     {
-        $qb = $this->createQueryBuilder();
+        $queryBuilder = $this->createQueryBuilder();
+        
         foreach ($criteria as $property => $value) {
-            $qb->where($property, $value, '=');
+            $queryBuilder->where($property, $value, '=');
         }
-        return $qb->orderBy('ID', 'ASC')
+        
+        return $queryBuilder->orderBy('ID', 'ASC')
             ->buildQuery()
             ->getResult();
     }
@@ -168,11 +170,11 @@ class BaseRepository
      */
     public function findSingle(array $criteria): ?BaseModel
     {
-        $qb = $this->createQueryBuilder();
+        $queryBuilder = $this->createQueryBuilder();
         foreach ($criteria as $property => $value) {
-            $qb->where($property, $value, '=');
+            $queryBuilder->where($property, $value, '=');
         }
-        return $qb->orderBy('ID', 'ASC')
+        return $queryBuilder->orderBy('ID', 'ASC')
             ->buildQuery()
             ->getSingleResult();
     }

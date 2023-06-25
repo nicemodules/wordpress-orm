@@ -40,13 +40,14 @@ abstract class BaseModel
 
     /**
      * Perform a manual clone of this object.
+     * @throws PropertyDoesNotExistException
      */
     public function __clone()
     {
         $class_name = get_called_class();
         $object = new $class_name;
 
-        $columns = Mapper::instance($class_name)->getColumns();
+        $columns = $this->getMapper()->getColumns();
 
         foreach (array_keys($columns) as $property) {
             if ($property == 'ID') {
@@ -71,7 +72,7 @@ abstract class BaseModel
         return null;
     }
 
-    public function hasId()
+    public function hasId(): bool
     {
         if (!isset($this->ID) || (isset($this->ID) && empty($this->ID))) {
             return false;
@@ -87,14 +88,10 @@ abstract class BaseModel
 
     /**
      * @return mixed
-     * @throws RepositoryClassNotDefinedException
-     * @throws RequiredAnnotationMissingException
-     * @throws UnknownColumnTypeException
-     * @throws ReflectionException
      */
     public function getTableName(): string
     {
-        return Mapper::instance(get_called_class())->getTableName();
+        return $this->getMapper()->getTableName();
     }
 
     /**
@@ -102,14 +99,10 @@ abstract class BaseModel
      * used in the TrackedCollection collection class.
      *
      * @return Column[]
-     * @throws ReflectionException
-     * @throws RepositoryClassNotDefinedException
-     * @throws RequiredAnnotationMissingException
-     * @throws UnknownColumnTypeException
      */
     public function getUpdateColumns(): array
     {
-        $columns = Mapper::instance(get_called_class())->getUpdateColumns();
+        $columns = $this->getMapper()->getUpdateColumns();
 
         if (!$this->hasId()) {
             unset($columns['ID']);
@@ -118,9 +111,12 @@ abstract class BaseModel
         return $columns;
     }
 
+    /**
+     * @return array
+     */
     public function getColumns(): array
     {
-        return Mapper::instance(get_called_class())->getColumns();
+        return $this->getMapper()->getColumns();
     }
 
     /**
@@ -128,14 +124,10 @@ abstract class BaseModel
      * used in the TrackedCollection to retrieve query placeholders.
      *
      * @return array
-     * @throws ReflectionException
-     * @throws RepositoryClassNotDefinedException
-     * @throws RequiredAnnotationMissingException
-     * @throws UnknownColumnTypeException
      */
-    public function getPlaceholders()
+    public function getPlaceholders(): array
     {
-        $placeholders = Mapper::instance(get_called_class())->getPlaceholders();
+        $placeholders = $this->getMapper()->getPlaceholders();
 
         if (!$this->hasId()) {
             unset($placeholders['ID']);
@@ -146,25 +138,16 @@ abstract class BaseModel
 
     /**
      * @return array
-     * @throws ReflectionException
-     * @throws RepositoryClassNotDefinedException
-     * @throws RequiredAnnotationMissingException
-     * @throws UnknownColumnTypeException
      */
     public function getColumnNames(): array
     {
         return array_keys($this->getUpdateColumns());
     }
-
-
+    
     /**
      * Return keyed values from this object as per the schema.
      * @return array
      * @throws PropertyDoesNotExistException
-     * @throws ReflectionException
-     * @throws RepositoryClassNotDefinedException
-     * @throws RequiredAnnotationMissingException
-     * @throws UnknownColumnTypeException
      */
     public function getAllValues(): array
     {
@@ -188,10 +171,6 @@ abstract class BaseModel
      * used in the TrackedCollection to retrieve query values
      * @return array
      * @throws PropertyDoesNotExistException
-     * @throws ReflectionException
-     * @throws RepositoryClassNotDefinedException
-     * @throws RequiredAnnotationMissingException
-     * @throws UnknownColumnTypeException
      */
     public function getAllUpdateValues(): array
     {
@@ -214,21 +193,26 @@ abstract class BaseModel
      * @throws RequiredAnnotationMissingException
      * @throws UnknownColumnTypeException
      */
-    final public function getObjectRelatedBy(string $property, string $modelClass): ?BaseModel
+    public function getObjectRelatedBy(string $property, string $modelClass): ?BaseModel
     {
         if (isset($this->relatedObjects[$property][$modelClass])) {
             return $this->relatedObjects[$property][$modelClass];
         }
+        
+        if(!$this->getMapper()->hasForeignKey($property)){
+            return null;
+        }
 
-        $manyToOne = Mapper::instance(get_called_class())->getForeignKey($property);
+        $manyToOne = $this->getMapper()->getForeignKey($property);
 
+        
         // If this property is a ManyToOne, check to see if it's an object and lazy
         // load it if not.
 
         $foreignKey = $this->get($property);
 
         $orm = Manager::instance();
-        $object_repository = $orm->getRepository($manyToOne->modelName);
+        $object_repository = $orm->getRepository($modelClass);
         $object = $object_repository->findSingle([$manyToOne->propertyName => $foreignKey]);
 
         if ($object) {
@@ -248,7 +232,7 @@ abstract class BaseModel
      * @throws RequiredAnnotationMissingException
      * @throws UnknownColumnTypeException
      */
-    final public function setObjectRelatedBy(string $property, BaseModel $object)
+    public function setObjectRelatedBy(string $property, BaseModel $object)
     {
         if (!property_exists($this, $property)) {
             throw new PropertyDoesNotExistException($property, get_called_class());
@@ -276,7 +260,7 @@ abstract class BaseModel
      * @return mixed
      * @throws PropertyDoesNotExistException
      */
-    final public function get(string $property)
+    public function get(string $property)
     {
         // Check to see if the property exists on the model.
         if (!property_exists($this, $property)) {
@@ -298,7 +282,7 @@ abstract class BaseModel
      * @return array
      * @throws PropertyDoesNotExistException
      */
-    final public function getMultiple($columns): array
+    public function getMultiple($columns): array
     {
         $results = [];
 
@@ -317,10 +301,9 @@ abstract class BaseModel
      * @param $property
      * @param $value
      *
-     * @return bool
      * @throws PropertyDoesNotExistException
      */
-    final public function set($property, $value): bool
+    public function set($property, $value): void
     {
         // Check to see if the property exists on the model.
         if (!property_exists($this, $property)) {
@@ -329,8 +312,6 @@ abstract class BaseModel
 
         // Update the model with the value.
         $this->$property = $value;
-
-        return true;
     }
 
     /**
@@ -360,5 +341,10 @@ abstract class BaseModel
     public function getClassName(): string
     {
         return get_called_class();
+    }
+    
+    public function getMapper(): mapper
+    {
+        return Mapper::instance($this->getClassName());
     }
 }

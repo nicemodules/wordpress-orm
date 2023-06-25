@@ -4,7 +4,7 @@ namespace NiceModules\Tests\ORM;
 
 use NiceModules\ORM\Annotations\Column;
 use NiceModules\ORM\Annotations\Table;
-use NiceModules\ORM\Exceptions\AllowDropIsFalseException;
+use NiceModules\ORM\Exceptions\AllowTruncateIsFalseException;
 use NiceModules\ORM\Exceptions\AllowSchemaUpdateIsFalseException;
 use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
 use NiceModules\ORM\Mapper;
@@ -131,8 +131,8 @@ class MapperTest extends TestCase
         $mapper->updateSchema();
         try {
             $mapper->dropTable();
-        } catch (AllowDropIsFalseException $e) {
-            $this->assertInstanceOf(AllowDropIsFalseException::class, $e);
+        } catch (AllowTruncateIsFalseException $e) {
+            $this->assertInstanceOf(AllowTruncateIsFalseException::class, $e);
             $this->assertEquals($e->getErrorMessage(Bar::class), $e->getMessage());
             return;
         }

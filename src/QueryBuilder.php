@@ -98,7 +98,7 @@ class QueryBuilder
         string $comparison = '=',
         string $operator = 'AND'
     ): QueryBuilder {
-        $this->joins[$property] = $joinModelClass;
+        $this->joins[$property][] = $joinModelClass;
 
         $this->getWhere()->addJoinCondition(
             $this->mapper->getClass(),
@@ -133,8 +133,8 @@ class QueryBuilder
         string $comparison = '=',
         string $operator = 'AND'
     ): QueryBuilder {
-        $this->leftJoins[$property] = $joinModelClass;
-        $where = $this->getLeftJoinWhere($property);
+        $this->leftJoins[$property][] = $joinModelClass;
+        $where = $this->getLeftJoinWhere($property, $joinModelClass);
         $where->addJoinCondition(
             $this->mapper->getClass(),
             $property,
@@ -147,13 +147,13 @@ class QueryBuilder
         return $this;
     }
 
-    public function getLeftJoinWhere($property): Where
+    public function getLeftJoinWhere($property, $modelClass): Where
     {
-        if (!isset($this->leftJoinWhere[$property])) {
-            $this->leftJoinWhere[$property] = new Where($this);
+        if (!isset($this->leftJoinWhere[$property][$modelClass])) {
+            $this->leftJoinWhere[$property][$modelClass] = new Where($this);
         }
 
-        return $this->leftJoinWhere[$property];
+        return $this->leftJoinWhere[$property][$modelClass];
     }
 
     /**
@@ -173,13 +173,23 @@ class QueryBuilder
      *
      * @param string $property
      * @param string $direction
-     *
+     * @param string|null $model
      * @return $this
+     * @throws Exceptions\RepositoryClassNotDefinedException
+     * @throws Exceptions\RequiredAnnotationMissingException
+     * @throws Exceptions\UnknownColumnTypeException
      * @throws InvalidOperatorException
      * @throws PropertyDoesNotExistException
+     * @throws ReflectionException
      */
-    public function orderBy(string $property, string $direction = self::ORDER_ASC)
+    public function orderBy(string $property, string $direction = self::ORDER_ASC, ?string $model = null)
     {
+        if($model === null){
+            $mapper = $this->mapper;
+        }else{
+            $mapper = Mapper::instance($model);
+        }
+        
         // Check the property exists.
         if (!in_array($property, $this->repository->getObjectProperties()) && $property != 'ID') {
             throw new PropertyDoesNotExistException($property, $this->repository->getObjectClass());
@@ -195,7 +205,7 @@ class QueryBuilder
         }
 
         // Save it
-        $this->orderBy[] = $property . " " . $direction . " ";
+        $this->orderBy[] = $mapper->getTableColumnName($property) . " " . $direction . " ";
 
         return $this;
     }
@@ -296,17 +306,16 @@ class QueryBuilder
             $this->result = [];
 
             foreach ($this->getRawResult() as $row) {
-                $object = $this->getObject($this->mapper->getClass(), $row);
-                $object->initialize();
+                $object = $this->getObject($this->mapper->getClass());
+                $this->setRelatedObjects($object, $row);
+                $this->fillObject($object, $row);
+
                 $this->ids[] = $object->getId();
                 $this->result[] = $object;
 
-                $this->setRelatedObjects($object, $row);
+                $object->initialize();
+                Manager::instance()->track($object);
             }
-        }
-
-        foreach ($this->result as $object) {
-            Manager::instance()->track($object);
         }
 
         return $this->result;
@@ -417,12 +426,14 @@ class QueryBuilder
         return $this->whereValues;
     }
 
-    protected function getObject(string $model, stdClass $row): BaseModel
+    protected function getObject(string $model): BaseModel
     {
-        $mapper = Mapper::instance($model);
+        return new $model();
+    }
 
-        /** @var BaseModel $object */
-        $object = new $model();
+    protected function fillObject(BaseModel $object, stdClass $row)
+    {
+        $mapper = Mapper::instance($object->getClassName());
 
         foreach ($row as $tableColumn => $value) {
             // if result has custom columns ignore them here for now
@@ -431,20 +442,15 @@ class QueryBuilder
                 $object->set($property, $value);
             }
         }
-
-        return $object;
     }
+
 
     private function getColumnQuery(): string
     {
         $columns = $this->mapper->getTableColumnNames();
 
-        foreach ($this->joins as $modelName) {
-            $columns = array_merge(
-                array_values($columns),
-                array_values(Mapper::instance($modelName)->getTableColumnNames())
-            );
-        }
+        $this->addJoinColumns($columns);
+        $this->addLeftJoinColumns($columns);
 
         foreach ($columns as $k => $column) {
             $columns[$k] = "$column as '$column'";
@@ -453,24 +459,58 @@ class QueryBuilder
         return implode(', ', $columns);
     }
 
+    private function addJoinColumns(&$columns)
+    {
+        foreach ($this->joins as $models) {
+            foreach ($models as $model) {
+                $columns = array_merge(
+                    array_values($columns),
+                    array_values(Mapper::instance($model)->getTableColumnNames())
+                );
+            }
+        }
+    }
+
+    private function addLeftJoinColumns(&$columns)
+    {
+        foreach ($this->leftJoins as $models) {
+            foreach ($models as $model) {
+                $columns = array_merge(
+                    array_values($columns),
+                    array_values(Mapper::instance($model)->getTableColumnNames())
+                );
+            }
+        }
+    }
+    
     private function getTableQuery(): string
     {
         $tables[] = $this->mapper->getTableName();
 
-        foreach ($this->joins as $joinModel) {
-            $tables[] = Mapper::instance($joinModel)->getTableName();
-        }
+        $this->addJoinTables($tables);
 
+        return 'FROM (' . implode(', ', $tables) . ') ' . implode(' ', $this->getLeftJoinQueries());
+    }
+
+    private function getLeftJoinQueries(): array
+    {
         $leftJoinsQueries = [];
-
-        foreach ($this->leftJoinWhere as $property => $where) {
-            $manyToOne = $this->mapper->getForeignKey($property);
-
-            $leftJoinsQueries[] = 'LEFT OUTER JOIN ' . Mapper::instance($manyToOne->modelName)->getTableName(
-                ) . ' ON ' . $where->build();
+        foreach ($this->leftJoinWhere as $modelWheres) {
+            foreach ($modelWheres as $model => $where) {
+                $leftJoinsQueries[] = 'LEFT OUTER JOIN ' . Mapper::instance($model)->getTableName(
+                    ) . ' ON ' . $where->build();
+            }
         }
+        return $leftJoinsQueries;
+    }
 
-        return 'FROM (' . implode(', ', $tables) . ') ' . implode(' ', $leftJoinsQueries);
+    private function addJoinTables(array &$tables)
+    {
+        foreach ($this->joins as $models) {
+            foreach ($models as $model) {
+                $tables[] = Mapper::instance($model)->getTableName();
+            }
+        }
     }
 
     private function getWhereQuery(): string
@@ -506,16 +546,28 @@ class QueryBuilder
 
     private function setRelatedObjects(BaseModel $object, stdClass $row)
     {
-        foreach ($this->joins as $property => $modelName) {
-            $relatedObject = $this->getObject($modelName, $row);
-            $object->setObjectRelatedBy($property, $relatedObject);
-            Manager::instance()->track($relatedObject);
+        foreach ($this->joins as $property => $models) {
+            foreach ($models as $model){
+                $relatedObject = $this->getObject($model);
+                $this->fillObject($relatedObject, $row);
+                $object->setObjectRelatedBy($property, $relatedObject);
+                Manager::instance()->track($relatedObject);    
+            }
         }
 
-        foreach ($this->leftJoins as $property => $modelName) {
-            $relatedObject = $this->getObject($modelName, $row);
-            $object->setObjectRelatedBy($property, $relatedObject);
-            Manager::instance()->track($relatedObject);
+        foreach ($this->leftJoins as $property => $models) {
+            foreach ($models as $model){
+                $resultIdIndex =  Mapper::instance($model)->getTableColumnName('ID');
+                
+                if(empty($row->$resultIdIndex)){
+                    continue;
+                }
+                    
+                $relatedObject = $this->getObject($model);
+                $this->fillObject($relatedObject, $row);
+                $object->setObjectRelatedBy($property, $relatedObject);
+                Manager::instance()->track($relatedObject);
+            }
         }
     }
 }

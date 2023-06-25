@@ -14,6 +14,7 @@ class Table
     public string $name;
     public bool $allow_schema_update = false;
     public bool $allow_drop = false;
+    public bool $allow_truncate = false;
     public string $prefix;
     /**
      * @var Index[]
