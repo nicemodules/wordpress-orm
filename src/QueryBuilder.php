@@ -23,6 +23,8 @@ class QueryBuilder
     private array $leftJoinWhere = [];
     private array $ids = [];
     private string $query;
+    private string $whereQuery = '';
+    private string $tableQuery = '';
     private ?Where $where;
     private array $whereValues = [];
     private array $orderBy = [];
@@ -184,12 +186,12 @@ class QueryBuilder
      */
     public function orderBy(string $property, string $direction = self::ORDER_ASC, ?string $model = null)
     {
-        if($model === null){
+        if ($model === null) {
             $mapper = $this->mapper;
-        }else{
+        } else {
             $mapper = Mapper::instance($model);
         }
-        
+
         // Check the property exists.
         if (!in_array($property, $this->repository->getObjectProperties()) && $property != 'ID') {
             throw new PropertyDoesNotExistException($property, $this->repository->getObjectClass());
@@ -482,14 +484,16 @@ class QueryBuilder
             }
         }
     }
-    
+
     private function getTableQuery(): string
     {
-        $tables[] = $this->mapper->getTableName();
+        if (empty($this->tableQuery)) {
+            $tables[] = $this->mapper->getTableName();
+            $this->addJoinTables($tables);
+            $this->tableQuery .= 'FROM (' . implode(', ', $tables) . ') ' . implode(' ', $this->getLeftJoinQueries());
+        }
 
-        $this->addJoinTables($tables);
-
-        return 'FROM (' . implode(', ', $tables) . ') ' . implode(' ', $this->getLeftJoinQueries());
+        return $this->tableQuery;
     }
 
     private function getLeftJoinQueries(): array
@@ -515,13 +519,13 @@ class QueryBuilder
 
     private function getWhereQuery(): string
     {
-        $where = '';
-
-        if ($this->where !== null) {
-            $where .= 'WHERE ' . $this->where->build();
+        if (empty($this->whereQuery)) {
+            if ($this->where !== null) {
+                $this->whereQuery .= 'WHERE ' . $this->where->build();
+            }
         }
 
-        return $where;
+        return $this->whereQuery;
     }
 
     private function getOrderQuery(): string
@@ -547,22 +551,22 @@ class QueryBuilder
     private function setRelatedObjects(BaseModel $object, stdClass $row)
     {
         foreach ($this->joins as $property => $models) {
-            foreach ($models as $model){
+            foreach ($models as $model) {
                 $relatedObject = $this->getObject($model);
                 $this->fillObject($relatedObject, $row);
                 $object->setObjectRelatedBy($property, $relatedObject);
-                Manager::instance()->track($relatedObject);    
+                Manager::instance()->track($relatedObject);
             }
         }
 
         foreach ($this->leftJoins as $property => $models) {
-            foreach ($models as $model){
-                $resultIdIndex =  Mapper::instance($model)->getTableColumnName('ID');
-                
-                if(empty($row->$resultIdIndex)){
+            foreach ($models as $model) {
+                $resultIdIndex = Mapper::instance($model)->getTableColumnName('ID');
+
+                if (empty($row->$resultIdIndex)) {
                     continue;
                 }
-                    
+
                 $relatedObject = $this->getObject($model);
                 $this->fillObject($relatedObject, $row);
                 $object->setObjectRelatedBy($property, $relatedObject);
