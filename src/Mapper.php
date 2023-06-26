@@ -6,8 +6,8 @@ use Doctrine\Common\Annotations\AnnotationReader;
 use NiceModules\ORM\Annotations\Column;
 use NiceModules\ORM\Annotations\ManyToOne;
 use NiceModules\ORM\Annotations\Table;
-use NiceModules\ORM\Exceptions\AllowTruncateIsFalseException;
 use NiceModules\ORM\Exceptions\AllowSchemaUpdateIsFalseException;
+use NiceModules\ORM\Exceptions\AllowTruncateIsFalseException;
 use NiceModules\ORM\Exceptions\IncompleteIndexException;
 use NiceModules\ORM\Exceptions\IncompleteManyToOneException;
 use NiceModules\ORM\Exceptions\PropertyDoesNotExistException;
@@ -149,6 +149,32 @@ class Mapper
     public function hasColumn($name): bool
     {
         return isset($this->columns[$name]);
+    }
+
+    /**
+     * @throws PropertyDoesNotExistException
+     */
+    public function getCustom(string $customKey)
+    {
+        $table = $this->getTable();
+        if(isset($table->custom[$customKey])){
+            return $table->custom[$customKey];
+        }
+
+        return null;
+    }
+    
+    /**
+     * @throws PropertyDoesNotExistException
+     */
+    public function getPropertyCustom(string $property, string $customKey)
+    {
+        $column = $this->getColumn($property);
+        if(isset($column->custom[$customKey])){
+            return $column->custom[$customKey];
+        }
+        
+        return null;
     }
 
     /**
@@ -306,7 +332,7 @@ class Mapper
         $sql = "TRUNCATE TABLE " . $this->getPrefix() . $this->table->name;
         Manager::instance()->getAdapter()->execute($sql);
     }
-    
+
 
     /**
      * @return Column[]

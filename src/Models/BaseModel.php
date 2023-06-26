@@ -343,7 +343,7 @@ abstract class BaseModel
         return get_called_class();
     }
     
-    public function getMapper(): mapper
+    public function getMapper(): Mapper
     {
         return Mapper::instance($this->getClassName());
     }
